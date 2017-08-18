@@ -6,6 +6,7 @@ const mongoose = require('mongoose');
 const Transaction = new mongoose.Schema({
   blockNumber: {type: String},
   network: {type: mongoose.Schema.Types.Mixed},
+  payload: {type: String, unique: true, required: true},
   format: {
     txid: {type: String},
     version: {type: Number},
@@ -31,9 +32,5 @@ const Transaction = new mongoose.Schema({
 
 });
 
-Transaction.pre('validate', function(next) {
-  this.payload = `${this.blockNumber}:${this.hash}`;
-  next();
-});
 
 module.exports = mongoose.model('BitcoinTransaction', Transaction);

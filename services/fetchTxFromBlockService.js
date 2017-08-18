@@ -11,7 +11,6 @@ let client = new bitcoin.Client({
   pass: 123
 });
 
-
 module.exports = async(fromBlock, size = 100) => {
 
   let currentBlock = await client.getBlockCountAsync();
@@ -82,9 +81,11 @@ module.exports = async(fromBlock, size = 100) => {
   return {
     txs: _.chain(txs)
       .compact()
-      .map(tx =>
-        new txDecoder(tx, bitcoinlib.networks.testnet)
-      )
+      .map(tx => {
+        let decoded = new txDecoder(tx, bitcoinlib.networks.testnet);
+        decoded.payload = tx;
+        return decoded;
+      })
       .value(),
     upBlock: toBlockNumber
   }
