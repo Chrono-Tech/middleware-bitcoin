@@ -1,13 +1,23 @@
 const _ = require('lodash'),
-  path = require('path'),
   accountModel = require('../models/accountModel'),
+  transactionModel = require('../models/transactionModel'),
   q2mb = require('query-to-mongo-and-back'),
   messages = require('../factories').messages.genericMessageFactory,
-  express = require('express');
+  express = require('express'),
+  Promise = require('bluebird'),
+  bitcoin = Promise.promisifyAll(require('bitcoin'));
+
 
 module.exports = (app) => {
 
   let router = express.Router();
+  let client = new bitcoin.Client({
+    host: 'localhost',
+    port: 8332,
+    user: 'user',
+    pass: 123
+  });
+
 
   app.get('/', (req, res) => {
     res.send({
@@ -16,7 +26,12 @@ module.exports = (app) => {
   });
 
   router.post('/account', async(req, res) => {
-    let account = new accountModel(req.body);
+
+    if (!req.body.account)
+      return res.send(messages.fail);
+
+    let address = await client.getAccountAddressAsync(req.body.account);
+    let account = new accountModel(_.merge({addresses: [address]}, req.body));
     if (account.validateSync())
       return res.send(messages.fail);
 
@@ -29,13 +44,13 @@ module.exports = (app) => {
 
   });
 
-  router.delete('/transactions/account', async(req, res) => {
+  router.delete('/account', async(req, res) => {
 
     if (!req.body.address)
       return res.send(messages.fail);
 
     try {
-      await accountModel.remove({address: req.body.address});
+      await accountModel.remove({account: req.body.account});
     } catch (e) {
       return res.send(messages.fail);
     }
@@ -43,13 +58,13 @@ module.exports = (app) => {
 
   });
 
-  router.get('/transactions', async(req, res) => {
+  router.get('/', async(req, res) => {
     //convert query request to mongo's
     let q = q2mb.fromQuery(req.query);
     //retrieve all records, which satisfy the query
     let result = await transactionModel.find(q.criteria, q.options.fields)
       .sort(q.options.sort)
-      .limit(q.options.limit)
+      .limit(q.options.limit || 10)
       .catch(() => []);
 
     res.send(result);

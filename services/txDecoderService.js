@@ -29,8 +29,11 @@ const decodeOutput = (tx, network) =>
       },
     };
 
-    if (vout.scriptPubKey.type === 'scripthash')
-      vout.scriptPubKey.addresses.push(bitcoin.address.fromOutputScript(out.script, network));
+    if (['scripthash', 'pubkeyhash'].includes(vout.scriptPubKey.type))
+      try {
+        vout.scriptPubKey.addresses.push(bitcoin.address.fromOutputScript(out.script, network));
+      } catch (e) {
+      }
 
     return vout
   });

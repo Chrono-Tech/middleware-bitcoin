@@ -14,7 +14,8 @@ const fetchTxFromBlockService = require('./services/fetchTxFromBlockService'),
   Promise = require('bluebird'),
   bodyParser = require('body-parser'),
   memwatch = require('memwatch-next'),
-  mongoose = require('mongoose');
+  mongoose = require('mongoose'),
+  bitcoin = Promise.promisifyAll(require('bitcoin'));
 
 mongoose.connect(config.mongo.uri);
 let app = express();
@@ -53,19 +54,15 @@ Promise.all([
 
       let data = await Promise.resolve(fetchTxFromBlockService(block, amount)).timeout(60000);
       let filtered = await filterTxService(data.txs);
-      let addressBalances = await fetchBalanceByAddsService(filtered.affectedAddresses);
-
-      if (addressBalances.length)
-        console.log(addressBalances);
-
+      let accountBalances = await fetchBalanceByAddsService(filtered.affectedAccounts);
 
       await Promise.all(filtered.txs.map(tx =>
         new transactionModel(tx).save().catch(() => {
         })
       ));
 
-      await Promise.all(addressBalances.map(data =>
-        accountModel.update({address: data.address}, {$set: {balance: data.balance}}).catch((e) => {
+      await Promise.all(accountBalances.map(data =>
+        accountModel.update({account: data.account}, {$set: {balance: data.balance}}).catch((e) => {
         })
       ));
 
@@ -74,12 +71,13 @@ Promise.all([
         })
       ));
 
-      await Promise.all(addressBalances.map(tx =>
+      await Promise.all(accountBalances.map(tx =>
         eventsEmitterService(amqpInstance, 'bitcoin_balance', tx).catch(() => {
         })
       ));
 
       console.log('block:', block, 'processed with next amount of', amount);
+
       await blockModel.findOneAndUpdate({}, {
         $set: {
           block: data.upBlock,
@@ -91,6 +89,16 @@ Promise.all([
       if (e instanceof Promise.TimeoutError && amount !== 1) {
         console.log('block:', block, 'timeout with amount', amount);
         return setTimeout(() => process(block, parseInt(amount / 2)), 10000);
+      }
+
+      if (e.code === 1 && e.maxBlock - block !== 0) {
+        console.log('max block reached');
+        return setTimeout(() => process(block, e.maxBlock - block), 1000);
+      }
+
+      if (e.code === 1 && e.maxBlock - block === 0) {
+        console.log('heads are equal');
+        return setTimeout(() => process(block, 1), 60000 * 5);
       }
 
       process(++block, 100);

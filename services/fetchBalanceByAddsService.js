@@ -13,6 +13,7 @@ module.exports = async addresses => {
   if (!addresses.length)
     return [];
 
+
   return await new Promise(res => {
     let answers = [];
 
@@ -21,7 +22,7 @@ module.exports = async addresses => {
         params: [addr]
       })
     ), function(err, balance) {
-      answers.push({balance: balance, address: addresses[answers.length]});
+      answers.push({balance: balance, account: addresses[answers.length]});
       if (answers.length === addresses.length)
         res(answers);
     });

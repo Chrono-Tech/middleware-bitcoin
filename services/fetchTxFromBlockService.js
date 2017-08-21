@@ -15,10 +15,10 @@ module.exports = async(fromBlock, size = 100) => {
 
   let currentBlock = await client.getBlockCountAsync();
 
-  if (fromBlock >= currentBlock)
-    return Promise.reject({code: 1});
-
   let toBlockNumber = fromBlock + size;
+
+  if (toBlockNumber > currentBlock)
+    return Promise.reject({code: 1, maxBlock: currentBlock});
 
   let blockHashes = await new Promise(res => {
     let answers = [];
