@@ -12,6 +12,13 @@ const fetchTxFromBlockService = require('./services/fetchTxFromBlockService'),
   Promise = require('bluebird'),
   log = bunyan.createLogger({name: 'core.blockProcessor'});
 
+/**
+ * @module entry point
+ * @description parse blocks from bitcoin, save txs, where one of registered accounts
+ * has been detected, and notify other services about new txs via amqp
+ */
+
+
 mongoose.connect(config.mongo.uri);
 
 let init = async() => {

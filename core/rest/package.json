@@ -1,5 +1,5 @@
 {
-  "name": "middleware_bitcoin:plugin_rest",
+  "name": "middleware_bitcoin.rest",
   "version": "1.0.0",
   "main": "index.js",
   "dependencies": {
@@ -12,7 +12,6 @@
     "dotenv": "^4.0.0",
     "express": "^4.15.4",
     "lodash": "^4.17.4",
-    "mongoose": "^4.11.7",
     "query-to-mongo-and-back": "git+https://github.com/ega-forever/query-to-mongo-and-back.git#develop"
   },
   "scripts": {

@@ -2,6 +2,7 @@ const _ = require('lodash'),
   accountModel = require('../../../models/accountModel'),
   transactionModel = require('../../../models/transactionModel'),
   q2mb = require('query-to-mongo-and-back'),
+  config = require('../../../config'),
   messages = require('../../../factories').messages.genericMessageFactory,
   express = require('express'),
   Promise = require('bluebird'),
@@ -11,12 +12,7 @@ const _ = require('lodash'),
 module.exports = (app) => {
 
   let router = express.Router();
-  let client = new bitcoin.Client({
-    host: 'localhost',
-    port: 8332,
-    user: 'user',
-    pass: 123
-  });
+  let client = new bitcoin.Client(config.bitcoin);
 
 
   app.get('/', (req, res) => {

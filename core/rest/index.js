@@ -5,6 +5,12 @@ const config = require('../../config'),
   mongoose = require('mongoose'),
   bodyParser = require('body-parser');
 
+/**
+ * @module entry point
+ * @description expose an express web server for txs
+ * and accounts manipulation
+ */
+
 mongoose.connect(config.mongo.uri);
 let app = express();
 

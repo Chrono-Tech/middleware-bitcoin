@@ -1,15 +1,19 @@
 const Promise = require('bluebird'),
   txDecoder = require('./txDecoderService'),
   _ = require('lodash'),
+  config = require('../../../config'),
   bitcoinlib = require('bitcoinjs-lib'),
-  bitcoin = Promise.promisifyAll(require('bitcoin'));
+  bitcoin = Promise.promisifyAll(require('bitcoin')),
+  client = new bitcoin.Client(config.bitcoin);
 
-let client = new bitcoin.Client({
-  host: 'localhost',
-  port: 8332,
-  user: 'user',
-  pass: 123
-});
+/**
+ * @service
+ * @description get range of blocks by number and size, fetch txs from block
+ * and decode each of them
+ * @param fromBlock
+ * @param size
+ * @returns {Promise.<{txs, upBlock}>}
+ */
 
 module.exports = async(fromBlock, size = 100) => {
 

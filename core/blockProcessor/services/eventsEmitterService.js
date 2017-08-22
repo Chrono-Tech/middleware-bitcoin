@@ -2,11 +2,14 @@ const bunyan = require('bunyan'),
   log = bunyan.createLogger({name: 'core.blockProcessor.services.eventsEmitterService'});
 
 /**
- * @module scheduleService
- * @description ping ipfs by specified time in config
- * @see {@link ../../../config.json}
+ * @service
+ * @description push a new message to the event's exchange with
+ * specified routing key - i.e. event param
+ * @param amqpInstance - amqp's connection instance
+ * @param event - event's name
+ * @param data - custom data
+ * @returns {Promise.<void>}
  */
-
 module.exports = async(amqpInstance, event, data) => {
 
   let channel = await amqpInstance.createChannel();

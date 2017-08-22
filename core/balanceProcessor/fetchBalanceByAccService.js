@@ -1,12 +1,14 @@
 const Promise = require('bluebird'),
-  bitcoin = Promise.promisifyAll(require('bitcoin'));
+  config = require('../../config'),
+  bitcoin = Promise.promisifyAll(require('bitcoin')),
+  client = new bitcoin.Client(config.bitcoin);
 
-let client = new bitcoin.Client({
-  host: 'localhost',
-  port: 8332,
-  user: 'user',
-  pass: 123
-});
+/**
+ * @service
+ * @description get balances for each account
+ * @param accounts - fetched accounts from mongodb
+ * @returns {Promise.<[{balance, account}]>}
+ */
 module.exports = async accounts => {
 
   if (!accounts.length)

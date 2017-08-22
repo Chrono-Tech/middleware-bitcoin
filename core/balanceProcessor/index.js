@@ -8,6 +8,12 @@ const config = require('../../config'),
   log = bunyan.createLogger({name: 'core.balanceProcessor'}),
   amqp = require('amqplib');
 
+/**
+ * @module entry point
+ * @description update balances for accounts, which addresses were specified
+ * in received transactions from blockParser via amqp
+ */
+
 mongoose.connect(config.mongo.uri);
 
 let init = async() => {

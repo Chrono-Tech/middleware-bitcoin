@@ -16,16 +16,9 @@ const config = require('../config'),
 jasmine.DEFAULT_TIMEOUT_INTERVAL = 60000 * 7;
 
 beforeAll(async() => {
-  ctx.client = new bitcoin.Client({
-    host: 'localhost',
-    port: 8332,
-    user: 'user',
-    pass: 123
-  });
-
+  ctx.client = new bitcoin.Client(config.bitcoin);
   mongoose.connect(config.mongo.uri);
   return await awaitLastBlock(ctx.client);
-
 });
 
 afterAll(() => {
