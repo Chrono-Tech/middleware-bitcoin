@@ -1,6 +1,7 @@
 const Promise = require('bluebird'),
   config = require('../../config'),
   bitcoin = Promise.promisifyAll(require('bitcoin')),
+  _ = require('lodash'),
   client = new bitcoin.Client(config.bitcoin);
 
 /**
@@ -12,8 +13,7 @@ const Promise = require('bluebird'),
 module.exports = async accounts => {
 
   if (!accounts.length)
-    return [];
-
+  {return [];}
 
   return await new Promise(res => {
     let answers = [];
@@ -22,10 +22,14 @@ module.exports = async accounts => {
       method: 'getbalance',
       params: [account.account]
     })
-    ), function(err, balance) {
-      answers.push({balance: balance, account: accounts[answers.length]});
-      if (answers.length === accounts.length)
+    ), function (err, balance) {
+
+      err ? _.pullAt(accounts, [answers.length]) :
+        answers.push({balance: balance, account: accounts[answers.length]});
+
+      if (answers.length === accounts.length) {
         res(answers);
+      }
     });
   });
 

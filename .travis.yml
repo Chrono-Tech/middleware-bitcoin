@@ -1,0 +1,33 @@
+sudo: required
+dist: trusty
+os: linux
+group: stable
+language: node_js
+node_js: 7.6.0
+
+services:
+  - mongodb
+  - rabbitmq
+
+before_install:
+  - mongo data --eval 'db.dropDatabase();'
+  - sudo apt-get update
+  - sudo apt-get install wget python2.7 git-all pkg-config libncurses5-dev libssl-dev libnss3-dev libexpat-dev libc6-dev -y
+
+install:
+  - npm install
+  - npm install -g pm2
+  - cd core/rest && npm install
+
+before_script:
+    - pm2 start ecosystem.config.js
+
+script:
+  - sleep 30 && npm test -- --coverage
+
+notifications:
+  email: false
+
+cache:
+  directories:
+    - node_modules

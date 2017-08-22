@@ -21,7 +21,7 @@ const fetchTxFromBlockService = require('./services/fetchTxFromBlockService'),
 
 mongoose.connect(config.mongo.uri);
 
-let init = async() => {
+let init = async () => {
 
   let currentBlock = await blockModel.findOne();
   let amqpInstance = await amqp.connect(config.rabbit.url);
@@ -35,7 +35,7 @@ let init = async() => {
   });
 
   // let currentBlock = 39530; //39530 68230 205530 206330
-  let process = async(block, amount) => {
+  let process = async (block, amount) => {
 
     try {
 

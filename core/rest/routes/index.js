@@ -21,15 +21,15 @@ module.exports = (app) => {
     });
   });
 
-  router.post('/account', async(req, res) => {
+  router.post('/account', async (req, res) => {
 
     if (!req.body.account)
-      return res.send(messages.fail);
+    {return res.send(messages.fail);}
 
     let address = await client.getAccountAddressAsync(req.body.account);
     let account = new accountModel(_.merge({addresses: [address]}, req.body));
     if (account.validateSync())
-      return res.send(messages.fail);
+    {return res.send(messages.fail);}
 
     try {
       await account.save();
@@ -40,10 +40,10 @@ module.exports = (app) => {
 
   });
 
-  router.delete('/account', async(req, res) => {
+  router.delete('/account', async (req, res) => {
 
     if (!req.body.address)
-      return res.send(messages.fail);
+    {return res.send(messages.fail);}
 
     try {
       await accountModel.remove({account: req.body.account});
@@ -54,7 +54,7 @@ module.exports = (app) => {
 
   });
 
-  router.get('/', async(req, res) => {
+  router.get('/', async (req, res) => {
     //convert query request to mongo's
     let q = q2mb.fromQuery(req.query);
     //retrieve all records, which satisfy the query

@@ -30,15 +30,15 @@ const decodeOutput = (tx, network) =>
     };
 
     if (['scripthash', 'pubkeyhash'].includes(vout.scriptPubKey.type))
-      try {
-        vout.scriptPubKey.addresses.push(bitcoin.address.fromOutputScript(out.script, network));
-      } catch (e) {
-      }
+    {try {
+      vout.scriptPubKey.addresses.push(bitcoin.address.fromOutputScript(out.script, network));
+    } catch (e) {
+      }}
 
     return vout;
   });
 
-module.exports = function(rawtx, network) {
+module.exports = function (rawtx, network) {
   this.tx = bitcoin.Transaction.fromHex(rawtx);
   this.network = network;
   this.format = decodeFormat(this.tx);

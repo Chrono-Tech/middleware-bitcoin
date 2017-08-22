@@ -16,7 +16,7 @@ const config = require('../../config'),
 
 mongoose.connect(config.mongo.uri);
 
-let init = async() => {
+let init = async () => {
   let conn = await amqp.connect(config.rabbit.url);
   let channel = await conn.createChannel();
 
@@ -29,7 +29,7 @@ let init = async() => {
     channel = await conn.createChannel();
   }
 
-  channel.consume('app.balance_processor', async(data) => {
+  channel.consume('app.balance_processor', async (data) => {
     let txs;
     try {
       txs = JSON.parse(data.content.toString());
