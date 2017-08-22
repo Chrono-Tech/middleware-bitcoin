@@ -1,8 +1,8 @@
 const _ = require('lodash'),
-  accountModel = require('../models/accountModel'),
-  transactionModel = require('../models/transactionModel'),
+  accountModel = require('../../../models/accountModel'),
+  transactionModel = require('../../../models/transactionModel'),
   q2mb = require('query-to-mongo-and-back'),
-  messages = require('../factories').messages.genericMessageFactory,
+  messages = require('../../../factories').messages.genericMessageFactory,
   express = require('express'),
   Promise = require('bluebird'),
   bitcoin = Promise.promisifyAll(require('bitcoin'));

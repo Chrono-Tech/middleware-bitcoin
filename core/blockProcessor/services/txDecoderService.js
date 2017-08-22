@@ -8,11 +8,11 @@ const decodeFormat = tx => ({
 
 const decodeInput = tx =>
   tx.ins.map(input => ({
-      txid: input.hash.reverse().toString('hex'),
-      n: input.index,
-      script: bitcoin.script.toASM(input.script),
-      sequence: input.sequence,
-    })
+    txid: input.hash.reverse().toString('hex'),
+    n: input.index,
+    script: bitcoin.script.toASM(input.script),
+    sequence: input.sequence,
+  })
   );
 
 const decodeOutput = (tx, network) =>
@@ -35,7 +35,7 @@ const decodeOutput = (tx, network) =>
       } catch (e) {
       }
 
-    return vout
+    return vout;
   });
 
 module.exports = function(rawtx, network) {

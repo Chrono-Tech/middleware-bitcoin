@@ -1,3 +1,6 @@
+const bunyan = require('bunyan'),
+  log = bunyan.createLogger({name: 'core.blockProcessor.services.eventsEmitterService'});
+
 /**
  * @module scheduleService
  * @description ping ipfs by specified time in config
@@ -9,14 +12,15 @@ module.exports = async(amqpInstance, event, data) => {
   let channel = await amqpInstance.createChannel();
 
   try {
-    await channel.assertExchange('events', 'direct', {durable: false});
+    await channel.assertExchange('events', 'topic', {durable: false});
   } catch (e) {
     channel = await amqpInstance.createChannel();
   }
 
   try {
-    await  channel.publish('events', 'bitcoin_transaction', new Buffer(JSON.stringify(tx)));
+    await  channel.publish('events', event, new Buffer(JSON.stringify(data)));
   } catch (e) {
+    log.error(e);
   }
 
   await channel.close();

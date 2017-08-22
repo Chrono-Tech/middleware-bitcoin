@@ -88,6 +88,6 @@ module.exports = async(fromBlock, size = 100) => {
       })
       .value(),
     upBlock: toBlockNumber
-  }
+  };
 
 };

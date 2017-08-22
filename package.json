@@ -8,16 +8,12 @@
     "bitcoinjs-lib": "^3.1.1",
     "bitcore-lib": "^0.14.0",
     "bluebird": "^3.5.0",
-    "body-parser": "^1.17.2",
     "bunyan": "^1.8.12",
     "coinfs": "^0.1.2",
-    "cors": "^2.8.4",
     "dotenv": "^4.0.0",
-    "express": "^4.15.4",
     "lodash": "^4.17.4",
     "memwatch-next": "^0.3.0",
     "mongoose": "^4.11.7",
-    "query-to-mongo-and-back": "git+https://github.com/ega-forever/query-to-mongo-and-back.git#develop",
     "require-all": "^2.2.0"
   },
   "devDependencies": {
@@ -26,7 +22,11 @@
     "request": "^2.81.0"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "lint": "node ./node_modules/eslint/bin/eslint.js -c .eslintrc.js --ext .js --fix --ignore-path .eslintignore .",
+    "test": "node ./node_modules/jest/bin/jest.js test --coverage --runInBand",
+    "rest": "node core/rest",
+    "block_processor": "node core/blockprocessor",
+    "balance_processor": "node core/balanceprocessor"
   },
   "author": "",
   "license": "ISC",
