@@ -22,14 +22,14 @@ let init = async () => {
 
   try {
     await channel.assertExchange('events', 'topic', {durable: false});
-    await channel.assertQueue('app.balance_processor');
-    await channel.bindQueue('app.balance_processor', 'events', 'bitcoin_transaction.*');
+    await channel.assertQueue('app_bitcoin.balance_processor');
+    await channel.bindQueue('app_bitcoin.balance_processor', 'events', 'bitcoin_transaction.*');
   } catch (e) {
     log.error(e);
     channel = await conn.createChannel();
   }
 
-  channel.consume('app.balance_processor', async (data) => {
+  channel.consume('app_bitcoin.balance_processor', async (data) => {
     let txs;
     try {
       txs = JSON.parse(data.content.toString());

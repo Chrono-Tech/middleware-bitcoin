@@ -3,24 +3,42 @@ module.exports = {
    * Application configuration section
    * http://pm2.keymetrics.io/docs/usage/application-declaration/
    */
-  apps : [
+  apps: [
     {
-      name      : 'block_processor',
-      script    : 'core/blockProcessor',
+      name: 'block_processor',
+      script: 'core/blockProcessor',
       env: {
-        COMMON_VARIABLE: 'true'
-      },
-      env_production : {
-        NODE_ENV: 'production'
+        MONGO_URI: 'mongodb://localhost:27017/data',
+        RABBIT_URI: 'amqp://localhost:5672',
+        BITCOIN_HOST: 'localhost',
+        BITCOIN_PORT: 8332,
+        BITCOIN_USER: 'user',
+        BITCOIN_PASS: 123
       }
     },
     {
-      name      : 'balance_processor',
-      script    : 'core/balanceProcessor'
+      name: 'balance_processor',
+      script: 'core/balanceProcessor',
+      env: {
+        MONGO_URI: 'mongodb://localhost:27017/data',
+        RABBIT_URI: 'amqp://localhost:5672',
+        BITCOIN_HOST: 'localhost',
+        BITCOIN_PORT: 8332,
+        BITCOIN_USER: 'user',
+        BITCOIN_PASS: 123
+      }
     },
     {
-      name      : 'rest',
-      script    : 'core/rest'
+      name: 'rest',
+      script: 'core/rest',
+      env: {
+        MONGO_URI: 'mongodb://localhost:27017/data',
+        REST_PORT: 8082,
+        BITCOIN_HOST: 'localhost',
+        BITCOIN_PORT: 8332,
+        BITCOIN_USER: 'user',
+        BITCOIN_PASS: 123
+      }
     }
   ]
 };
