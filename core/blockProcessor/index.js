@@ -23,10 +23,10 @@ mongoose.connect(config.mongo.uri);
 
 let init = async () => {
 
-  let currentBlock = await blockModel.findOne();
+  let currentBlock = await blockModel.find().sort('block').limit(1);
   let amqpInstance = await amqp.connect(config.rabbit.url);
 
-  currentBlock = _.chain(currentBlock).get('block', 0).add(0).value();
+  currentBlock = _.chain(currentBlock).get('0.block', 0).add(0).value();
 
   let is_leak = false;
   memwatch.on('leak', (info) => {
@@ -45,43 +45,47 @@ let init = async () => {
         return setTimeout(() => process(block, amount), 30000);
       }
 
+      console.log('before')
       let data = await Promise.resolve(fetchTxFromBlockService(block, amount)).timeout(60000);
-      let filtered = await filterTxService(data.txs);
+      //let filtered = await filterTxService(data.txs);
 
-      await Promise.all(
-        _.chain(filtered)
-          .map(account => account.txs)
-          .flattenDeep()
-          .map(tx =>
-            new transactionModel(tx).save().catch(() => {})
-          ));
+      if (_.find(data.blocks, b => b.addresses.length))
+        console.log('found block with addresses');
 
-      await Promise.all(
-        _.chain(filtered)
-          .map(account =>
-            account.addresses.map(address =>
-              eventsEmitterService(amqpInstance, `bitcoin_transaction.${address}`,
-                account.txs.map(tx => tx.txid)
-              ).catch(() => {
-              })
-            )
-          )
-          .flattenDeep()
-          .value()
-      );
+      /*      await Promise.all(
+       _.chain(filtered)
+       .map(account => account.txs)
+       .flattenDeep()
+       .map(tx =>
+       new transactionModel(tx).save().catch(() => {})
+       ));
+
+       await Promise.all(
+       _.chain(filtered)
+       .map(account =>
+       account.addresses.map(address =>
+       eventsEmitterService(amqpInstance, `bitcoin_transaction.${address}`,
+       account.txs.map(tx => tx.txid)
+       ).catch(() => {
+       })
+       )
+       )
+       .flattenDeep()
+       .value()
+       );*/
 
       log.info('block:', block, 'processed with next amount of', amount);
 
+//      eventsEmitterService(amqpInstance, 'bitcoin_blocks', {from: block, to: amount}).catch(() => {});
 
-      eventsEmitterService(amqpInstance, 'bitcoin_blocks', {from: block, to: amount}).catch(() => {});
+      /*      await blockModel.findOneAndUpdate({}, {
+       $set: {
+       block: data.upBlock,
+       created: Date.now()
+       }
+       }, {upsert: true});
 
-      await blockModel.findOneAndUpdate({}, {
-        $set: {
-          block: data.upBlock,
-          created: Date.now()
-        }
-      }, {upsert: true});
-      return await process(data.upBlock, 100);
+       return await process(data.upBlock, 100);*/
     } catch (e) {
       if (e instanceof Promise.TimeoutError && amount !== 1) {
         log.info('block:', block, 'timeout with amount', amount);

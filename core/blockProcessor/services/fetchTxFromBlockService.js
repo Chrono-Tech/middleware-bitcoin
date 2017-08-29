@@ -63,53 +63,45 @@ module.exports = async (fromBlock, size = 100) => {
       });
   });
 
-  let txs = await Promise.mapSeries(
-    _.chain(blocks)
-      .map(block => block.tx)
-      .flattenDeep()
-      .map(tx => ({
-        method: 'gettransaction',
-        params: [tx]
-      }))
-      .compact()
-      .chunk(100)
-      .value(), txs =>
-      new Promise(res => {
-        let answers = [];
-        client.cmd(txs, function (err, tx) {
-          if (tx) {
-            tx.blocknumber = _.chain(blocks)
-              .find({hash: tx.blockhash})
-              .get('number')
-              .value();
+  console.log(blocks[0].tx)
+  for (let i = 0; i < blocks.length; i++) {
+    let txs = await Promise.mapSeries(
+      _.chain(blocks[i].tx)
+        .map(tx => ({
+          method: 'gettransaction',
+          params: [tx]
+        }))
+        .compact()
+        .chunk(100)
+        .value(), txs =>
+        new Promise(res => {
+          let answers = [];
+          client.cmd(txs, function (err, tx) {
+            //console.log(err || tx)
             answers.push(tx);
-          }
+            if (answers.length === txs.length) {
+              res(_.compact(answers));
+            }
+          });
+        })
+    );
 
-          if (err) {
-            answers.push(null);
-          }
+    console.log(txs[0])
+    blocks[i].addresses = _.chain(txs)
+      .map(tx =>
+        _.chain(tx.details)
+          .map(item => item.address)
+          .flattenDeep()
+          .value()
+      )
+      .flattenDeep()
+      .uniq()
+      .value();
+  }
 
-          if (answers.length === txs.length) {
-            res(_.compact(answers));
-          }
-        });
-      })
-  );
-
-  txs = _.chain(txs)
-    .flattenDeep()
-    .compact()
-    .value();
 
   return {
-    txs: _.chain(txs)
-      .compact()
-      .map(tx => {
-        tx.network = bitcoinlib.networks.testnet;
-        tx.payload = `${tx.blocknumber}:${tx.blockhash}`;
-        return tx;
-      })
-      .value(),
+    blocks: blocks,
     upBlock: toBlockNumber
   };
 

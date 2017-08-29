@@ -4,29 +4,30 @@ const mongoose = require('mongoose');
  *  @description block model - represents a block in eth
  */
 const Transaction = new mongoose.Schema({
-  network: {type: mongoose.Schema.Types.Mixed},
-  payload: {type: String, unique: true, required: true},
-  amount: {type: Number},
-  confirmations: {type: Number},
-  generated: {type: Boolean},
-  blockhash: {type: String},
-  blockindex: {type: Number},
-  blocktime: {type: Number},
-  txid: {type: String},
-  time: {type: Number},
-  timereceived: {type: Number},
-  'bip125-replaceable': {type: String},
-  details: [
-    {
-      account: {type: String},
-      address: {type: String},
-      category: {type: String},
-      amount: {type: Number},
-      vout: {type: Number}
-    }
+  payload: {type: String, unique: true},
+  hash: {type: String},
+  witnessHash: {type: String},
+  size: {type: Number},
+  virtualSize: {type: Number},
+  value: {type: String},
+  fee: {type: String},
+  rate: {type: String},
+  minFee: {type: String},
+  inputs: [{
+    type: {type: String},
+    subtype: {type: String},
+    address: {type: String},
+    redeem: {type: String},
+    sequence: {type: Number},
+    coin: {type: String}
+  }
   ],
-  hex: {type: String}
-
+  outputs: [{
+    type: {type: String},
+    value: {type: String},
+    address: {type: String}
+  }],
+  locktime: {type: Number}
 });
 
 module.exports = mongoose.model('BitcoinTransaction', Transaction);

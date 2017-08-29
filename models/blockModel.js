@@ -5,6 +5,8 @@ const mongoose = require('mongoose');
  */
 const Block = new mongoose.Schema({
   block: {type: Number},
+  hash: {type: String},
+  addresses: [{type: String}],
   network: {type: String},
   created: {type: Date, required: true, default: Date.now},
 
