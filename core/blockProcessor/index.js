@@ -53,8 +53,7 @@ let init = async () => {
           .map(account => account.txs)
           .flattenDeep()
           .map(tx =>
-            new transactionModel(tx).save().catch(() => {
-            })
+            new transactionModel(tx).save().catch(() => {})
           ));
 
       await Promise.all(
@@ -62,7 +61,7 @@ let init = async () => {
           .map(account =>
             account.addresses.map(address =>
               eventsEmitterService(amqpInstance, `bitcoin_transaction.${address}`,
-                account.txs.map(tx => _.get(tx, 'format.txid'))
+                account.txs.map(tx => tx.txid)
               ).catch(() => {
               })
             )
@@ -72,6 +71,9 @@ let init = async () => {
       );
 
       log.info('block:', block, 'processed with next amount of', amount);
+
+
+      eventsEmitterService(amqpInstance, 'bitcoin_blocks', {from: block, to: amount}).catch(() => {});
 
       await blockModel.findOneAndUpdate({}, {
         $set: {
@@ -93,7 +95,8 @@ let init = async () => {
 
       if (e.code === 1 && e.maxBlock - block === 0) {
         log.info('heads are equal');
-        return setTimeout(() => process(block, 1), 60000 * 5);
+        // return setTimeout(() => process(block, 1), 60000 * 5);
+        return setTimeout(() => process(block, 1), 10000);
       }
 
       process(++block, 100);
