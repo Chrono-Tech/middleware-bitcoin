@@ -35,10 +35,8 @@ module.exports = {
     url: process.env.RABBIT_URI || 'amqp://localhost:5672'
   },
   bitcoin: {
-    host: process.env.BITCOIN_HOST || 'localhost',
-    port: parseInt(process.env.BITCOIN_PORT) || 8332,
-    user: process.env.BITCOIN_USER || 'user',
-    pass: process.env.BITCOIN_PASS || '123'
-
+    dbpath: '../test_bcoin/db',
+    network: 'testnet',
+    ipcName: 'bitcoin'
   }
 };

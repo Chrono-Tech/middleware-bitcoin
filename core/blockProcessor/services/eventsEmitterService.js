@@ -21,7 +21,7 @@ module.exports = async (amqpInstance, event, data) => {
   }
 
   try {
-    await  channel.publish('events', event, new Buffer(JSON.stringify(data)));
+    await channel.publish('events', event, new Buffer(JSON.stringify(data)));
   } catch (e) {
     log.error(e);
   }

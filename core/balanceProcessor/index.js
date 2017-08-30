@@ -2,10 +2,10 @@ const config = require('../../config'),
   mongoose = require('mongoose'),
   transactionModel = require('../../models/transactionModel'),
   accountModel = require('../../models/accountModel'),
-  fetchBalanceByAccService = require('./fetchBalanceByAccService'),
   _ = require('lodash'),
   bunyan = require('bunyan'),
   log = bunyan.createLogger({name: 'core.balanceProcessor'}),
+  ipc = require('node-ipc'),
   amqp = require('amqplib');
 
 /**
@@ -14,11 +14,27 @@ const config = require('../../config'),
  * in received transactions from blockParser via amqp
  */
 
+Object.assign(ipc.config, {
+  id: config.bitcoin.ipcName,
+  retry: 1500,
+  silent: true
+});
+
 mongoose.connect(config.mongo.uri);
 
 let init = async () => {
   let conn = await amqp.connect(config.rabbit.url);
   let channel = await conn.createChannel();
+  await new Promise(res => {
+    ipc.connectTo(config.bitcoin.ipcName, () => {
+      ipc.of[config.bitcoin.ipcName].on('connect', res);
+
+      ipc.of[config.bitcoin.ipcName].on('disconnect', () => {
+        process.exit(-1);
+      });
+
+    });
+  });
 
   try {
     await channel.assertExchange('events', 'topic', {durable: false});
@@ -29,47 +45,36 @@ let init = async () => {
     channel = await conn.createChannel();
   }
 
+  channel.prefetch(2);
   channel.consume('app_bitcoin.balance_processor', async (data) => {
-    let txs;
+    let payload;
     try {
-      txs = JSON.parse(data.content.toString());
+      payload = JSON.parse(data.content.toString());
     } catch (e) {
       log.error(e);
       return;
     }
 
-    txs = await transactionModel.find({'format.txid': {$in: txs}});
+    let coins = await new Promise(res => {
+      ipc.of.bitcoin.on('message', res);
+      ipc.of.bitcoin.emit('message', JSON.stringify({
+          method: 'getcoinsbyaddress',
+          params: [payload.address]
+        })
+      );
+    });
 
-    let addresses = _.chain(txs)
-      .map(tx =>
-        _.chain(tx.outputs)
-          .map(out =>
-            out.scriptPubKey.addresses
-          )
-          .flattenDeep()
-          .value()
-      )
-      .flattenDeep()
-      .uniq()
+    let balance = _.chain(coins)
+      .map(coin => coin.value)
+      .sum()
+      .defaultTo(0)
       .value();
 
-    let accounts = await accountModel.find({addresses: {$in: addresses}});
-
-    let balances = await fetchBalanceByAccService(accounts);
-
-    await Promise.all(balances.map(data =>
-      accountModel.update({account: data.account.account}, {$set: {balance: data.balance}}).catch(() => {
-      })
-    ));
-
-    await Promise.all(balances.map(item =>
-      item.account.addresses
-        .map(address =>
-          channel.publish('events', `bitcoin_balance.${address}`, new Buffer(JSON.stringify(data)))
-        )
-    ));
-
-  }, {noAck: true});
+    console.log(`balance updated with: ${balance} for ${payload.address}`);
+    await accountModel.update({address: payload.address}, {$set: {balance: balance}});
+    channel.publish('events', `bitcoin_balance.${payload.address}`, new Buffer(JSON.stringify({balance: balance})));
+    channel.ack(data);
+  });
 
 };
 
