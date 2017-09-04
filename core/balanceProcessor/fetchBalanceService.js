@@ -43,33 +43,37 @@ module.exports = async address => {
     );
   });
 
-  let sortedCoins = _.chain(coins.result)
+  let coinHeight = _.chain(coins.result)
     .sortBy('height')
-    .reverse()
+    .last()
+    .get('height')
     .value();
+
+  let sum = _.chain(coins.result)
+    .map(coin => coin.value)
+    .sum()
+    .defaultTo(0)
+    .value();
+
+  let balances = {
+    confirmations0: 0,
+    confirmations3: 0,
+    confirmations6: 0
+  };
+
+  if (height.result - coinHeight >= 6)
+    _.merge(balances, {confirmations0: sum, confirmations3: sum, confirmations6: sum});
+
+  if (3 <= height.result - coinHeight < 6)
+    _.merge(balances, {confirmations0: sum, confirmations3: sum});
+
+  if (height.result - coinHeight < 3)
+    _.merge(balances, {confirmations0: sum});
 
   ipc.disconnect(config.bitcoin.ipcName);
 
   return {
-    balances: {
-      confirmations0: _.chain(sortedCoins)
-        .map(coin => coin.value)
-        .sum()
-        .defaultTo(0)
-        .value(),
-      confirmations3: _.chain(sortedCoins)
-        .filter(coin => coin.height <= height.result - 3)
-        .map(coin => coin.value)
-        .sum()
-        .defaultTo(0)
-        .value(),
-      confirmations6: _.chain(sortedCoins)
-        .filter(coin => coin.height <= height.result - 6)
-        .map(coin => coin.value)
-        .sum()
-        .defaultTo(0)
-        .value()
-    },
+    balances: balances,
     lastBlockCheck: height.result
   };
 

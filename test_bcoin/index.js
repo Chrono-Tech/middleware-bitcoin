@@ -30,6 +30,8 @@ const init = async () => {
     );
   });
 
+  console.log(coins.result[0]);
+
   let height = await new Promise(res => {
     ipc.of.bitcoin.on('message', res);
     ipc.of.bitcoin.emit('message', JSON.stringify({
@@ -39,33 +41,35 @@ const init = async () => {
     );
   });
 
+  let coinHeight = _.chain(coins.result)
+    .sortBy('height')
+    .last()
+    .get('height')
+    .value();
 
-let sortedCoins = _.chain(coins.result)
-  .sortBy('height')
-  .reverse()
-  .value();
+  console.log(coinHeight);
 
-console.log(sortedCoins);
-
-let balances = {
-  '0': _.chain(sortedCoins)
-    .map(coin=>coin.value)
+  let sum = _.chain(coins.result)
+    .map(coin => coin.value)
     .sum()
     .defaultTo(0)
-    .value(),
-  '3': _.chain(sortedCoins)
-    .filter(coin=>coin.height <= height.result - 3)
-    .map(coin=>coin.value)
-    .sum()
-    .defaultTo(0)
-    .value(),
-  '6': _.chain(sortedCoins)
-    .filter(coin=>coin.height <= height.result - 6)
-    .map(coin=>coin.value)
-    .sum()
-    .defaultTo(0)
-    .value()
-};
+    .value();
+
+  let balances = {
+    confirmations0: 0,
+    confirmations3: 0,
+    confirmations6: 0
+  };
+
+  console.log(height.result - coinHeight);
+  if (height.result - coinHeight >= 6)
+    _.merge(balances, {confirmations0: sum, confirmations3: sum, confirmations6: sum});
+
+  if (3 <= height.result - coinHeight < 6)
+    _.merge(balances, {confirmations0: sum, confirmations3: sum});
+
+  if (height.result - coinHeight < 3)
+    _.merge(balances, {confirmations0: sum});
 
 
   console.log(balances);
