@@ -1,17 +1,12 @@
-const _ = require('lodash'),
-  accountModel = require('../../../models/accountModel'),
-  transactionModel = require('../../../models/transactionModel'),
-  q2mb = require('query-to-mongo-and-back'),
-  config = require('../../../config'),
+const accountModel = require('../../../models/accountModel'),
+  _ = require('lodash'),
   messages = require('../../../factories').messages.genericMessageFactory,
   express = require('express'),
-  Promise = require('bluebird'),
-  bitcoin = Promise.promisifyAll(require('bitcoin'));
+  fetchBalanceService = require('../services/fetchBalanceService');
 
 module.exports = (app) => {
 
   let router = express.Router();
-  let client = new bitcoin.Client(Object.assign({timeout: 60000 * 10}, config.bitcoin));
 
   app.get('/', (req, res) => {
     res.send({
@@ -19,7 +14,7 @@ module.exports = (app) => {
     });
   });
 
-  router.post('/addr', async (req, res) => {
+  router.post('/', async (req, res) => {
 
     if (!req.body.address) {
       return res.send(messages.fail);
@@ -31,47 +26,10 @@ module.exports = (app) => {
       return res.send(messages.fail);
     }
 
-    await client.importAddressAsync(account.address, account.address, false);
-    let txs = await client.listReceivedByAddressAsync(0, false);
-
-    txs = await Promise.mapSeries(
-      _.chain(txs)
-        .filter({address: account.address})
-        .map(tx => tx.txids)
-        .flattenDeep()
-        .map(tx => ({
-          method: 'gettransaction',
-          params: [tx]
-        }))
-        .compact()
-        .chunk(100)
-        .value(), txs =>
-        new Promise(res => {
-          let answers = [];
-          client.cmd(txs, function (err, tx) {
-            err ? answers.push(null) :
-              answers.push(tx);
-
-            if (answers.length === txs.length) {
-              res(_.compact(answers));
-            }
-          });
-        })
-    );
-
-    await Promise.all(
-      _.chain(txs)
-        .flattenDeep()
-        .map(tx => {
-          tx.payload = `${tx.blockhash}:${tx.txid}`;
-          return new transactionModel(tx).save().catch((e) => {
-            console.log(e);
-          });
-        })
-        .value()
-    );
-
     try {
+      let balances = await fetchBalanceService(account.address);
+      account.balances = balances.balances;
+      account.lastBlockCheck = balances.lastBlockCheck;
       await account.save();
     } catch (e) {
       return res.send(messages.fail);
@@ -80,14 +38,14 @@ module.exports = (app) => {
 
   });
 
-  router.delete('/account', async (req, res) => {
+  router.delete('/', async (req, res) => {
 
     if (!req.body.address) {
       return res.send(messages.fail);
     }
 
     try {
-      await accountModel.remove({account: req.body.account});
+      await accountModel.remove({address: req.body.address});
     } catch (e) {
       return res.send(messages.fail);
     }
@@ -95,19 +53,14 @@ module.exports = (app) => {
 
   });
 
-  router.get('/', async (req, res) => {
-    //convert query request to mongo's
-    let q = q2mb.fromQuery(req.query);
-    //retrieve all records, which satisfy the query
-    let result = await transactionModel.find(q.criteria, q.options.fields)
-      .sort(q.options.sort)
-      .limit(q.options.limit || 10)
-      .catch(() => []);
+  router.get('/:addr/balance', async (req, res) => {
 
-    res.send(result);
+    let account = await accountModel.findOne({address: req.params.addr});
+
+    res.send(_.get(account, 'balances', {}));
 
   });
 
-  app.use('/transactions', router);
+  app.use('/addr', router);
 
 };
