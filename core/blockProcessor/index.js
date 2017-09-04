@@ -41,6 +41,7 @@ const init = async function () {
 
   node.on('connect', function(entry, block) {
     console.log('%s (%d) added to chain.', entry.rhash(), entry.height);
+    eventsEmitterService(amqpInstance, 'bitcoin_block', {block: entry.height});
   });
 
   node.on('block', async function (block) {

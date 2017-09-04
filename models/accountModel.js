@@ -11,7 +11,12 @@ const Account = new mongoose.Schema({
     required: true,
     validate: [a => /^[a-km-zA-HJ-NP-Z1-9]{25,36}$/.test(a), messages.wrongAddress]
   },
-  balance: {type: Number, default: 0},
+  balances: {
+    confirmations0: {type: Number, default: 0, required: true},
+    confirmations3: {type: Number, default: 0, required: true},
+    confirmations6: {type: Number, default: 0, required: true}
+  },
+  lastBlockCheck: {type: Number, default: 0, required: true},
   created: {type: Date, required: true, default: Date.now}
 });
 
