@@ -1,0 +1,37 @@
+{
+  "name": "middleware_bitcoin",
+  "version": "1.0.0",
+  "main": "index.js",
+  "dependencies": {
+    "amqplib": "^0.5.1",
+    "bitcoin": "^3.0.1",
+    "bitcoinjs-lib": "^3.1.1",
+    "bitcore-lib": "^0.14.0",
+    "bluebird": "^3.5.0",
+    "bunyan": "^1.8.12",
+    "coinfs": "^0.1.2",
+    "dotenv": "^4.0.0",
+    "lodash": "^4.17.4",
+    "memwatch-next": "^0.3.0",
+    "mongoose": "^4.11.7",
+    "require-all": "^2.2.0"
+  },
+  "devDependencies": {
+    "babel-eslint": "^7.2.3",
+    "bitcoinjs-lib": "^3.1.1",
+    "eslint": "^4.4.1",
+    "eslint-plugin-chronobank": "github:chronobank/eslint-plugin-chronobank",
+    "jest": "^20.0.4",
+    "request": "^2.81.0"
+  },
+  "scripts": {
+    "lint": "node ./node_modules/eslint/bin/eslint.js -c .eslintrc.js --ext .js --fix --ignore-path .eslintignore .",
+    "test": "node ./node_modules/jest/bin/jest.js test --coverage --runInBand",
+    "rest": "node core/rest",
+    "block_processor": "node core/blockprocessor",
+    "balance_processor": "node core/balanceprocessor"
+  },
+  "author": "",
+  "license": "ISC",
+  "description": ""
+}
