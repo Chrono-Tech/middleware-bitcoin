@@ -7,7 +7,8 @@ const accountModel = require('../../../models/accountModel'),
 
 module.exports = (app) => {
 
-  let router = express.Router();
+  let routerAddr = express.Router();
+  let routerTx = express.Router();
 
   app.get('/', (req, res) => {
     res.send({
@@ -15,7 +16,7 @@ module.exports = (app) => {
     });
   });
 
-  router.post('/', async (req, res) => {
+  routerAddr.post('/', async (req, res) => {
 
     if (!req.body.address) {
       return res.send(messages.fail);
@@ -41,7 +42,7 @@ module.exports = (app) => {
 
   });
 
-  router.delete('/', async (req, res) => {
+  routerAddr.delete('/', async (req, res) => {
 
     if (!req.body.address) {
       return res.send(messages.fail);
@@ -56,7 +57,7 @@ module.exports = (app) => {
 
   });
 
-  router.get('/:addr/balance', async (req, res) => {
+  routerAddr.get('/:addr/balance', async (req, res) => {
 
     let account = await accountModel.findOne({address: req.params.addr});
 
@@ -79,11 +80,20 @@ module.exports = (app) => {
 
   });
 
-  router.get('/:addr/utxo', async (req, res) => {
+  routerAddr.get('/:addr/utxo', async (req, res) => {
     let utxos = await fetchUTXOService(req.params.addr);
     res.send(utxos);
   });
 
-  app.use('/addr', router);
+  routerTx.post('/send', async (req, res) => {
+    let utxos = await fetchUTXOService(req.params.addr);
+
+
+
+    res.send();
+  });
+
+  app.use('/addr', routerAddr);
+  app.use('/tx', routerTx);
 
 };
