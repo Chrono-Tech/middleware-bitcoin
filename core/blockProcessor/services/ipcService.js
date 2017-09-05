@@ -23,13 +23,13 @@ const init = async (node) => {
 
             ipc.server.emit(socket, 'message', {result: json, id: data.id});
           } catch (e) {
-            ipc.server.emit(socket, 'message', JSON.stringify({
+            ipc.server.emit(socket, 'message', {
                 result: null,
                 error: {
                   message: 'Invalid request.',
                   code: RPCBase.errors.INVALID_REQUEST
                 }
-              })
+              }
             );
           }
 
