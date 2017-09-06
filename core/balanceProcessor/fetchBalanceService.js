@@ -5,9 +5,9 @@ const Promise = require('bluebird'),
 
 /**
  * @service
- * @description get balances for each account
- * @param accounts - fetched accounts from mongodb
- * @returns {Promise.<[{balance, account}]>}
+ * @description get balances for an address
+ * @param address - registered address
+ * @returns {Promise.<[{balances, lastBlockCheck}]>}
  */
 
 module.exports = async address => {

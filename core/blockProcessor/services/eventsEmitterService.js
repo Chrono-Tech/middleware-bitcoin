@@ -10,7 +10,7 @@ const bunyan = require('bunyan'),
  * @param data - custom data
  * @returns {Promise.<void>}
  */
-module.exports = async (amqpInstance, event, data, opts = {}) => {
+module.exports = async (amqpInstance, event, data) => {
 
   let channel = await amqpInstance.createChannel();
 

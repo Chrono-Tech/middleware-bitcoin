@@ -8,7 +8,7 @@ const config = require('../../config'),
 
 /**
  * @module entry point
- * @description update balances for accounts, which addresses were specified
+ * @description update balances for addresses, which were specified
  * in received transactions from blockParser via amqp
  */
 
@@ -59,13 +59,14 @@ let init = async () => {
         await accountModel.update({address: accounts[i].address}, {$set: balances});
         channel.publish('events', `bitcoin_balance.${accounts[i].address}`, new Buffer(JSON.stringify({balances: balances.balances})));
       } catch (e) {
-        console.log(e);
+        log.error(e);
       }
 
     channel.ack(data);
   });
 
   channel.consume('app_bitcoin.balance_processor.tx', async (data) => {
+    console.log(data.content.toString());
     let payload;
     try {
       payload = JSON.parse(data.content.toString());
@@ -82,9 +83,9 @@ let init = async () => {
         lastBlockCheck: {$lt: balances.lastBlockCheck}
       }, {$set: balances});
       channel.publish('events', `bitcoin_balance.${payload.address}`, new Buffer(JSON.stringify({balances: balances.balances})));
-      console.log(`balance updated with: ${balances} for ${payload.address}`);
+      log.info(`balance updated with: ${balances} for ${payload.address}`);
     } catch (e) {
-      console.log(e);
+      log.error(e);
     }
 
     channel.ack(data);

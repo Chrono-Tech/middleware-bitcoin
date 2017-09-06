@@ -2,9 +2,9 @@ const _ = require('lodash');
 
 /**
  * @service
- * @description get balances for each account
- * @param accounts - fetched accounts from mongodb
- * @returns {Promise.<[{balance, account}]>}
+ * @description calculate balances by specified utxos
+ * @param utxos - utxo transactions
+ * @returns {Promise.<[{balances, lastBlockCheck}]>}
  */
 
 module.exports = utxos => {
@@ -12,6 +12,10 @@ module.exports = utxos => {
   let highestCoin = _.chain(utxos)
     .sortBy('height')
     .last()
+    .defaults({
+      confirmations: 0,
+      height: 0
+    })
     .value();
 
   let sum = _.chain(utxos)

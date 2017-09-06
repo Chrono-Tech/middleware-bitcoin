@@ -1,13 +1,18 @@
 const Promise = require('bluebird'),
   ipc = require('node-ipc'),
-  _ = require('lodash'),
   config = require('../../../config');
 
 /**
  * @service
- * @description get balances for each account
- * @param accounts - fetched accounts from mongodb
- * @returns {Promise.<[{balance, account}]>}
+ * @description get utxos for a specified address
+ * @param address - registered address
+ * @returns {Promise.<[{address: *,
+ *     txid: *,
+ *     scriptPubKey: *,
+ *     amount: *,
+ *     satoshis: *,
+ *     height: *,
+ *     confirmations: *}]>}
  */
 
 module.exports = async address => {
@@ -28,18 +33,18 @@ module.exports = async address => {
   let coins = await new Promise((res, rej) => {
     ipc.of[config.bitcoin.ipcName].on('message', data => data.error ? rej(data.error) : res(data.result));
     ipc.of[config.bitcoin.ipcName].emit('message', JSON.stringify({
-        method: 'getcoinsbyaddress',
-        params: [address]
-      })
+      method: 'getcoinsbyaddress',
+      params: [address]
+    })
     );
   });
 
   let height = await new Promise((res, rej) => {
     ipc.of[config.bitcoin.ipcName].on('message', data => data.error ? rej(data.error) : res(data.result));
     ipc.of[config.bitcoin.ipcName].emit('message', JSON.stringify({
-        method: 'getblockcount',
-        params: []
-      })
+      method: 'getblockcount',
+      params: []
+    })
     );
   });
 

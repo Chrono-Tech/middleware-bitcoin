@@ -1,10 +1,11 @@
 const _ = require('lodash'),
-  accountModel = require('../../../models/accountModel');
+  accountModel = require('../../../models/accountModel'),
+  Network = require('bcoin/lib/protocol/network');
 
 /**
  * @service
- * @description filter txs by registered account's addresses
- * @param txs - an array of txs
+ * @description filter txs by registered addresses
+ * @param block - an array of txs
  * @returns {Promise.<*>}
  */
 
@@ -12,9 +13,13 @@ const _ = require('lodash'),
 module.exports = async block => {
 
   let addresses = _.chain(block.txs)
-    .map(tx => _.union(tx.inputs, tx.outputs))
+    .map(tx => {
+      let network = Network.get('testnet');
+      tx = tx.getJSON(network);
+      return _.union(tx.inputs, tx.outputs);
+    })
     .flattenDeep()
-    .map(i => (i.getAddress() || '').toString())
+    .map(i => i.address || '')
     .compact()
     .uniq()
     .chunk(100)

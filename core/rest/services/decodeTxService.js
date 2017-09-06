@@ -1,15 +1,19 @@
-const _ = require('lodash');
+const _ = require('lodash'),
+  Network = require('bcoin/lib/protocol/network'),
+  TX = require('bcoin/lib/primitives/tx'),
+  config = require('../../../config');
 
 /**
  * @service
  * @description get balances for each account
- * @param accounts - fetched accounts from mongodb
+ * @param txHex - raw transaction
  * @returns {Promise.<[{balance, account}]>}
  */
 
-module.exports = tx => {
+module.exports = txHex => {
 
-
-
+  let decodedTx = TX.fromRaw(txHex, 'hex');
+  let network = Network.get(config.bitcoin.network);
+  return decodedTx.getJSON(network);
 
 };
