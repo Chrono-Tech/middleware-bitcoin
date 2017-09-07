@@ -3,6 +3,7 @@ const config = require('../../config'),
   fetchBalanceService = require('./fetchBalanceService'),
   accountModel = require('../../models/accountModel'),
   bunyan = require('bunyan'),
+  _ = require('lodash'),
   log = bunyan.createLogger({name: 'core.balanceProcessor'}),
   amqp = require('amqplib');
 
@@ -56,7 +57,17 @@ let init = async () => {
     for (let account of accounts) {
       try {
         let balances = await fetchBalanceService(account.address);
-        await accountModel.update({address: account.address}, {$set: balances});
+        await accountModel.update({address: account.address}, {
+          $set: _.transform({
+            'balances.confirmations0': _.get(balances, 'balances.confirmations0'),
+            'balances.confirmations3': _.get(balances, 'balances.confirmations3'),
+            'balances.confirmations6': _.get(balances, 'balances.confirmations6')
+          }, (result, val, key) => {
+            if (val) {
+              result[key] = val;
+            }
+          }, {lastBlockCheck: balances.lastBlockCheck})
+        });
         channel.publish('events', `bitcoin_balance.${account.address}`, new Buffer(JSON.stringify({balances: balances.balances})));
       } catch (e) {
         log.error(e);
@@ -78,10 +89,18 @@ let init = async () => {
 
     try {
       let balances = await fetchBalanceService(payload.address);
-      await accountModel.update({
-        address: payload.address,
-        lastBlockCheck: {$lt: balances.lastBlockCheck}
-      }, {$set: balances});
+      await accountModel.update({address: payload.address, lastBlockCheck: {$lt: balances.lastBlockCheck}}, {
+          $set: _.transform({
+            'balances.confirmations0': _.get(balances, 'balances.confirmations0'),
+            'balances.confirmations3': _.get(balances, 'balances.confirmations3'),
+            'balances.confirmations6': _.get(balances, 'balances.confirmations6')
+          }, (result, val, key) => {
+            if (val) {
+              result[key] = val;
+            }
+          }, {lastBlockCheck: balances.lastBlockCheck})
+        }
+      );
       channel.publish('events', `bitcoin_balance.${payload.address}`, new Buffer(JSON.stringify({balances: balances.balances})));
       log.info(`balance updated with: ${JSON.stringify(balances)} for ${payload.address}`);
     } catch (e) {
