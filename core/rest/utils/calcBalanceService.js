@@ -24,20 +24,19 @@ module.exports = utxos => {
     .defaultTo(0)
     .value();
 
-  let balances = {
-    confirmations0: 0,
-    confirmations3: 0,
-    confirmations6: 0
-  };
+  let balances = {};
 
-  if (highestCoin.confirmations >= 6)
-  {_.merge(balances, {confirmations0: sum, confirmations3: sum, confirmations6: sum});}
+  if (highestCoin.confirmations >= 6) {
+    _.merge(balances, {confirmations0: sum, confirmations3: sum, confirmations6: sum});
+  }
 
-  if (3 <= highestCoin.confirmations && highestCoin.confirmations < 6)
-  {_.merge(balances, {confirmations0: sum, confirmations3: sum});}
+  if (3 <= highestCoin.confirmations && highestCoin.confirmations < 6) {
+    _.merge(balances, {confirmations0: sum, confirmations3: sum});
+  }
 
-  if (highestCoin.confirmations < 3)
-  {_.merge(balances, {confirmations0: sum});}
+  if (highestCoin.confirmations < 3) {
+    _.merge(balances, {confirmations0: sum});
+  }
 
   return {
     balances: balances,
