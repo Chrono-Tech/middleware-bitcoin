@@ -4,6 +4,7 @@ const ipc = require('node-ipc'),
   bcoin = require('bcoin'),
   Network = require('bcoin/lib/protocol/network'),
   TX = require('bcoin/lib/primitives/tx'),
+  sendCoin = require('./CreateSendCoinTx'),
   config = require('../config');
 
 Object.assign(ipc.config, {
@@ -39,9 +40,9 @@ const init = async () => {
   let coins = await new Promise((res, rej) => {
     ipc.of.bitcoin.on('message', data => data.error ? rej() : res(data.result));
     ipc.of.bitcoin.emit('message', JSON.stringify({
-        method: 'getcoinsbyaddress',
-        params: [keyPair2.getAddress()]
-      })
+      method: 'getcoinsbyaddress',
+      params: [keyPair2.getAddress()]
+    })
     );
   });
 
@@ -58,7 +59,7 @@ const init = async () => {
   //console.log(txId);
 
   var tx = new bitcoin.TransactionBuilder(bitcoin.networks.testnet, 100);
-/*  var txId = '9470cd6658db6eb237006b876353d6d960fe89244638155048d4b18ac42a1fb7'; //belong to k1
+  /*  var txId = '9470cd6658db6eb237006b876353d6d960fe89244638155048d4b18ac42a1fb7'; //belong to k1
   var txId2 = '9470cd6658db6eb237006b876353d6d960fe89244638155048d4b18ac42a1fb7'; //belong to k2
   var txId3 = '9470cd6658db6eb237006b876353d6d960fe89244638155048d4b18ac42a1fb7'; //belong to k3*/
 

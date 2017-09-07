@@ -31,13 +31,13 @@ module.exports = utxos => {
   };
 
   if (highestCoin.confirmations >= 6)
-    _.merge(balances, {confirmations0: sum, confirmations3: sum, confirmations6: sum});
+  {_.merge(balances, {confirmations0: sum, confirmations3: sum, confirmations6: sum});}
 
-  if (3 <= highestCoin.confirmations < 6)
-    _.merge(balances, {confirmations0: sum, confirmations3: sum});
+  if (3 <= highestCoin.confirmations && highestCoin.confirmations < 6)
+  {_.merge(balances, {confirmations0: sum, confirmations3: sum});}
 
   if (highestCoin.confirmations < 3)
-    _.merge(balances, {confirmations0: sum});
+  {_.merge(balances, {confirmations0: sum});}
 
   return {
     balances: balances,

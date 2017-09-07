@@ -12,9 +12,10 @@ const _ = require('lodash'),
 
 module.exports = async block => {
 
+  let network = Network.get('testnet');
+
   let addresses = _.chain(block.txs)
     .map(tx => {
-      let network = Network.get('testnet');
       tx = tx.getJSON(network);
       return _.union(tx.inputs, tx.outputs);
     })
@@ -31,20 +32,21 @@ module.exports = async block => {
 
   return _.chain(filteredByChunks)
     .flattenDeep()
-    .map(address => ({
-        address: address,
-        txs: _.chain(block.txs)
-          .filter(tx =>
-            _.chain(tx.inputs)
-              .union(tx.outputs)
-              .flattenDeep()
-              .map(i => (i.getAddress() || '').toString())
-              .includes(address)
-              .value()
-          )
-          .map(tx => tx.hash('hex'))
-          .value()
-      })
+    .map(account => ({
+      address: account.address,
+      txs: _.chain(block.txs)
+        .filter(tx => {
+          tx = tx.getJSON(network);
+          return _.chain(tx.inputs)
+            .union(tx.outputs)
+            .flattenDeep()
+            .map(i => (i.address || '').toString())
+            .includes(account.address)
+            .value();
+        })
+        .map(tx => tx.hash('hex'))
+        .value()
+    })
     )
     .value();
 

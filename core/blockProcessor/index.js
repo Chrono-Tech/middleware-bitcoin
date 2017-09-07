@@ -9,8 +9,6 @@ const bcoin = require('bcoin'),
   log = bunyan.createLogger({name: 'core.blockProcessor'}),
   config = require('../../config');
 
-
-
 /**
  * @module entry point
  * @description process blocks, and notify, through rabbitmq, other
@@ -24,7 +22,8 @@ const node = new bcoin.fullnode({
   prefix: config.bitcoin.dbpath,
   spv: true,
   indexTX: true,
-  indexAddress: true
+  indexAddress: true,
+  'log-level': 'info'
 });
 
 mongoose.connect(config.mongo.uri);
@@ -38,7 +37,7 @@ const init = async function () {
     log.info('leak');
 
     if (!node.pool.syncing)
-      return;
+    {return;}
 
     try {
       node.stopSync();
@@ -55,7 +54,6 @@ const init = async function () {
 
   node.on('block', async block => {
 
-    console.log('new block')
     let filtered = await filterAccountsService(block);
 
     await Promise.all(filtered.map(item =>
@@ -63,7 +61,6 @@ const init = async function () {
     ));
 
   });
-
 
   ipcService(node);
   node.startSync();

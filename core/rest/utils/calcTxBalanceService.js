@@ -1,18 +1,16 @@
-const _ = require('lodash'),
-  Network = require('bcoin/lib/protocol/network'),
-  TX = require('bcoin/lib/primitives/tx'),
-  config = require('../../../config');
+const _ = require('lodash');
 
 /**
  * @service
  * @description get balances for each account
- * @param txHex - raw transaction
+ * @param tx - decoded transaction
  * @returns {Promise.<[{balance, account}]>}
  */
 
 module.exports = tx => {
 
   let outputs = _.chain(tx.outputs)
+    .take(tx.inputs.length)
     .map((output, i) => ({
       from: tx.inputs[i].address,
       to: output.address,

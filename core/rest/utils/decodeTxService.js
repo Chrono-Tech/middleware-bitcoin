@@ -1,5 +1,4 @@
-const _ = require('lodash'),
-  Network = require('bcoin/lib/protocol/network'),
+const Network = require('bcoin/lib/protocol/network'),
   TX = require('bcoin/lib/primitives/tx'),
   config = require('../../../config');
 

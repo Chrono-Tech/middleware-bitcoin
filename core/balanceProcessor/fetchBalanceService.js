@@ -25,31 +25,31 @@ module.exports = async address => {
     });
   });
 
-  let coins = await new Promise(res => {
-    ipc.of[config.bitcoin.ipcName].on('message', res);
+  let coins = await new Promise((res, rej) => {
+    ipc.of[config.bitcoin.ipcName].on('message', data => data.error ? rej(data.error) : res(data.result));
     ipc.of[config.bitcoin.ipcName].emit('message', JSON.stringify({
-        method: 'getcoinsbyaddress',
-        params: [address]
-      })
+      method: 'getcoinsbyaddress',
+      params: [address]
+    })
     );
   });
 
-  let height = await new Promise(res => {
-    ipc.of[config.bitcoin.ipcName].on('message', res);
+  let height = await new Promise((res, rej) => {
+    ipc.of[config.bitcoin.ipcName].on('message', data => data.error ? rej(data.error) : res(data.result));
     ipc.of[config.bitcoin.ipcName].emit('message', JSON.stringify({
-        method: 'getblockcount',
-        params: []
-      })
+      method: 'getblockcount',
+      params: []
+    })
     );
   });
 
-  let coinHeight = _.chain(coins.result)
+  let coinHeight = _.chain(coins)
     .sortBy('height')
     .last()
     .get('height')
     .value();
 
-  let sum = _.chain(coins.result)
+  let sum = _.chain(coins)
     .map(coin => coin.value)
     .sum()
     .defaultTo(0)
@@ -61,20 +61,23 @@ module.exports = async address => {
     confirmations6: 0
   };
 
-  if (height.result - coinHeight >= 6)
+  if (height - coinHeight >= 6) {
     _.merge(balances, {confirmations0: sum, confirmations3: sum, confirmations6: sum});
+  }
 
-  if (3 <= height.result - coinHeight < 6)
+  if (3 <= height - coinHeight && height - coinHeight  < 6) {
     _.merge(balances, {confirmations0: sum, confirmations3: sum});
+  }
 
-  if (height.result - coinHeight < 3)
+  if (height - coinHeight < 3) {
     _.merge(balances, {confirmations0: sum});
+  }
 
   ipc.disconnect(config.bitcoin.ipcName);
 
   return {
     balances: balances,
-    lastBlockCheck: height.result
+    lastBlockCheck: height
   };
 
 };
