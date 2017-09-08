@@ -1,20 +1,26 @@
 const _ = require('lodash'),
-  accountModel = require('../../../models/accountModel');
+  accountModel = require('../../../models/accountModel'),
+  Network = require('bcoin/lib/protocol/network');
 
 /**
  * @service
- * @description filter txs by registered account's addresses
- * @param txs - an array of txs
+ * @description filter txs by registered addresses
+ * @param block - an array of txs
  * @returns {Promise.<*>}
  */
 
 
 module.exports = async block => {
 
+  let network = Network.get('testnet');
+
   let addresses = _.chain(block.txs)
-    .map(tx => _.union(tx.inputs, tx.outputs))
+    .map(tx => {
+      tx = tx.getJSON(network);
+      return _.union(tx.inputs, tx.outputs);
+    })
     .flattenDeep()
-    .map(i => (i.getAddress() || '').toString())
+    .map(i => i.address || '')
     .compact()
     .uniq()
     .chunk(100)
@@ -26,20 +32,21 @@ module.exports = async block => {
 
   return _.chain(filteredByChunks)
     .flattenDeep()
-    .map(address => ({
-        address: address,
-        txs: _.chain(block.txs)
-          .filter(tx =>
-            _.chain(tx.inputs)
-              .union(tx.outputs)
-              .flattenDeep()
-              .map(i => (i.getAddress() || '').toString())
-              .includes(address)
-              .value()
-          )
-          .map(tx => tx.hash('hex'))
-          .value()
-      })
+    .map(account => ({
+      address: account.address,
+      txs: _.chain(block.txs)
+        .filter(tx => {
+          tx = tx.getJSON(network);
+          return _.chain(tx.inputs)
+            .union(tx.outputs)
+            .flattenDeep()
+            .map(i => (i.address || '').toString())
+            .includes(account.address)
+            .value();
+        })
+        .map(tx => tx.hash('hex'))
+        .value()
+    })
     )
     .value();
 

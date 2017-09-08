@@ -1,13 +1,18 @@
 const Promise = require('bluebird'),
   ipc = require('node-ipc'),
-  config = require('../../config'),
-  _ = require('lodash');
+  config = require('../../../config');
 
 /**
  * @service
- * @description get balances for an address
+ * @description get utxos for a specified address
  * @param address - registered address
- * @returns {Promise.<[{balances, lastBlockCheck}]>}
+ * @returns {Promise.<[{address: *,
+ *     txid: *,
+ *     scriptPubKey: *,
+ *     amount: *,
+ *     satoshis: *,
+ *     height: *,
+ *     confirmations: *}]>}
  */
 
 module.exports = async address => {
@@ -43,37 +48,15 @@ module.exports = async address => {
     );
   });
 
-  let coinHeight = _.chain(coins)
-    .sortBy('height')
-    .last()
-    .get('height')
-    .value();
-
-  let sum = _.chain(coins)
-    .map(coin => coin.value)
-    .sum()
-    .defaultTo(0)
-    .value();
-
-  let balances = {};
-
-  if (height - coinHeight >= 6) {
-    _.merge(balances, {confirmations0: sum, confirmations3: sum, confirmations6: sum});
-  }
-
-  if (3 <= height - coinHeight && height - coinHeight  < 6) {
-    _.merge(balances, {confirmations0: sum, confirmations3: sum});
-  }
-
-  if (height - coinHeight < 3) {
-    _.merge(balances, {confirmations0: sum});
-  }
-
   ipc.disconnect(config.bitcoin.ipcName);
 
-  return {
-    balances: balances,
-    lastBlockCheck: height
-  };
-
+  return coins.map(coin => ({
+    address: coin.address,
+    txid: coin.hash,
+    scriptPubKey: coin.script,
+    amount: coin.value / 100000000,
+    satoshis: coin.value,
+    height: coin.height,
+    confirmations: height - coin.height
+  }));
 };
