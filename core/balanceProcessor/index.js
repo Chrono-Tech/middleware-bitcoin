@@ -1,11 +1,9 @@
 const config = require('../../config'),
   mongoose = require('mongoose'),
-  transactionModel = require('../../models/transactionModel'),
+  fetchBalanceService = require('./fetchBalanceService'),
   accountModel = require('../../models/accountModel'),
-  _ = require('lodash'),
   bunyan = require('bunyan'),
   log = bunyan.createLogger({name: 'core.balanceProcessor'}),
-  ipc = require('node-ipc'),
   amqp = require('amqplib');
 
 /**
@@ -14,65 +12,81 @@ const config = require('../../config'),
  * in received transactions from blockParser via amqp
  */
 
-Object.assign(ipc.config, {
-  id: config.bitcoin.ipcName,
-  retry: 1500,
-  silent: true
-});
-
 mongoose.connect(config.mongo.uri);
 
 let init = async () => {
   let conn = await amqp.connect(config.rabbit.url);
   let channel = await conn.createChannel();
-  await new Promise(res => {
-    ipc.connectTo(config.bitcoin.ipcName, () => {
-      ipc.of[config.bitcoin.ipcName].on('connect', res);
-
-      ipc.of[config.bitcoin.ipcName].on('disconnect', () => {
-        process.exit(-1);
-      });
-
-    });
-  });
 
   try {
     await channel.assertExchange('events', 'topic', {durable: false});
-    await channel.assertQueue('app_bitcoin.balance_processor');
-    await channel.bindQueue('app_bitcoin.balance_processor', 'events', 'bitcoin_transaction.*');
+    await channel.assertQueue('app_bitcoin.balance_processor.tx');
+    await channel.bindQueue('app_bitcoin.balance_processor.tx', 'events', 'bitcoin_transaction.*');
+  } catch (e) {
+    log.error(e);
+    channel = await conn.createChannel();
+  }
+
+  try {
+    await channel.assertQueue('app_bitcoin.balance_processor.block');
+    await channel.bindQueue('app_bitcoin.balance_processor.block', 'events', 'bitcoin_block');
   } catch (e) {
     log.error(e);
     channel = await conn.createChannel();
   }
 
   channel.prefetch(2);
-  channel.consume('app_bitcoin.balance_processor', async (data) => {
+
+  channel.consume('app_bitcoin.balance_processor.block', async data => {
     let payload;
     try {
       payload = JSON.parse(data.content.toString());
     } catch (e) {
       log.error(e);
+      channel.ack(data);
       return;
     }
 
-    let coins = await new Promise(res => {
-      ipc.of.bitcoin.on('message', res);
-      ipc.of.bitcoin.emit('message', JSON.stringify({
-          method: 'getcoinsbyaddress',
-          params: [payload.address]
-        })
-      );
+    let accounts = await accountModel.find({
+      $where: 'obj.balances && !(obj.balances.confirmations0 === obj.balances.confirmations3 && ' +
+      'obj.balances.confirmations3 ===  obj.balances.confirmations6)',
+      lastBlockCheck: {$lt: payload.block}
     });
 
-    let balance = _.chain(coins)
-      .map(coin => coin.value)
-      .sum()
-      .defaultTo(0)
-      .value();
+    for (let i = 0; i < accounts.length; i++)
+      try {
+        let balances = await fetchBalanceService(accounts[i].address);
+        await accountModel.update({address: accounts[i].address}, {$set: balances});
+        channel.publish('events', `bitcoin_balance.${accounts[i].address}`, new Buffer(JSON.stringify({balances: balances.balances})));
+      } catch (e) {
+        console.log(e);
+      }
 
-    console.log(`balance updated with: ${balance} for ${payload.address}`);
-    await accountModel.update({address: payload.address}, {$set: {balance: balance}});
-    channel.publish('events', `bitcoin_balance.${payload.address}`, new Buffer(JSON.stringify({balance: balance})));
+    channel.ack(data);
+  });
+
+  channel.consume('app_bitcoin.balance_processor.tx', async (data) => {
+    let payload;
+    try {
+      payload = JSON.parse(data.content.toString());
+    } catch (e) {
+      channel.ack(data);
+      log.error(e);
+      return;
+    }
+
+    try {
+      let balances = await fetchBalanceService(payload.address);
+      await accountModel.update({
+        address: payload.address,
+        lastBlockCheck: {$lt: balances.lastBlockCheck}
+      }, {$set: balances});
+      channel.publish('events', `bitcoin_balance.${payload.address}`, new Buffer(JSON.stringify({balances: balances.balances})));
+      console.log(`balance updated with: ${balances} for ${payload.address}`);
+    } catch (e) {
+      console.log(e);
+    }
+
     channel.ack(data);
   });
 
