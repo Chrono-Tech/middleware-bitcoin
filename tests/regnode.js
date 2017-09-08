@@ -1,13 +1,14 @@
 const bcoin = require('bcoin'),
-  filterAccountsService = require('./services/filterAccountsService'),
-  ipcService = require('./services/ipcService'),
-  eventsEmitterService = require('./services/eventsEmitterService'),
+  filterAccountsService = require('../core/blockProcessor/services/filterAccountsService'),
+  ipcService = require('../core/blockProcessor/services/ipcService'),
+  eventsEmitterService = require('../core/blockProcessor/services/eventsEmitterService'),
   mongoose = require('mongoose'),
   amqp = require('amqplib'),
   memwatch = require('memwatch-next'),
   bunyan = require('bunyan'),
   log = bunyan.createLogger({name: 'core.blockProcessor'}),
-  config = require('../../config');
+  config = require('../config'),
+  shared = require('./shared');
 
 /**
  * @module entry point
@@ -15,16 +16,14 @@ const bcoin = require('bcoin'),
  * services about new block or tx, where we meet registered address
  */
 
-
 const node = new bcoin.fullnode({
-  network: config.bitcoin.network,
-  db: config.bitcoin.db,
-  prefix: config.bitcoin.dbpath,
+  network: 'regtest',
+  db: 'memory',
   spv: true,
   indexTX: true,
   indexAddress: true,
   'log-level': 'info',
-  'coinbase-address': config.bitcoin.coinbase
+  'coinbase-address': [shared.accountA.getAddress(), shared.accountB.getAddress()]
 });
 
 mongoose.connect(config.mongo.uri);

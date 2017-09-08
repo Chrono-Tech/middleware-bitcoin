@@ -1,5 +1,6 @@
 const accountModel = require('../../../../models/accountModel'),
   messages = require('../../../../factories').messages.genericMessageFactory,
+  _ = require('lodash'),
   calcBalanceService = require('../../utils/calcBalanceService'),
   fetchUTXOService = require('../../utils/fetchUTXOService');
 
@@ -18,7 +19,11 @@ module.exports = async (req, res) => {
   let utxos = await fetchUTXOService(req.body.address);
   let balances = calcBalanceService(utxos);
 
-  account.balances = balances.balances;
+  account.balances = _.merge({
+    confirmations0: 0,
+    confirmations3: 0,
+    confirmations6: 0
+  }, balances.balances);
   account.lastBlockCheck = balances.lastBlockCheck;
   await account.save();
 

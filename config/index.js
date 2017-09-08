@@ -34,9 +34,17 @@ module.exports = {
   rabbit: {
     url: process.env.RABBIT_URI || 'amqp://localhost:5672'
   },
+  /*  bitcoin: {
+   dbpath: '../test_bcoin/db',
+   network: 'testnet',
+   db: 'leveldb',
+   ipcName: 'bitcoin'
+   }*/
   bitcoin: {
-    dbpath: '../test_bcoin/db',
-    network: 'testnet',
-    ipcName: 'bitcoin'
+    dbpath: '',
+    network: 'regtest',
+    db: 'memory',
+    ipcName: 'bitcoin',
+    coinbase: ['RXjwE6pvdFoR9m81KZKZVotZpn4j1SLrvH']
   }
 };

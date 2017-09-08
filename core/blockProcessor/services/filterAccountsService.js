@@ -1,5 +1,6 @@
 const _ = require('lodash'),
   accountModel = require('../../../models/accountModel'),
+  config = require('../../../config'),
   Network = require('bcoin/lib/protocol/network');
 
 /**
@@ -12,7 +13,7 @@ const _ = require('lodash'),
 
 module.exports = async block => {
 
-  let network = Network.get('testnet');
+  let network = Network.get(config.bitcoin.network);
 
   let addresses = _.chain(block.txs)
     .map(tx => {
