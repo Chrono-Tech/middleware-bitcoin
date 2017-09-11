@@ -27,10 +27,11 @@ Below is the expamle configuration:
 MONGO_URI=mongodb://localhost:32772/data
 REST_PORT=8082
 RABBIT_URI=amqp://localhost:32769
-BITCOIN_HOST=localhost
-BITCOIN_PORT=8332
-BITCOIN_USER=user
-BITCOIN_PASS=123
+BITCOIN_NETWORK=regtest
+BITCOIN_DB=leveldb
+BITCOIN_DB_PATH=./db
+BITCOIN_IPC=bitcoin
+BITCOIN_ETHERBASE=RXjwE6pvdFoR9m81KZKZVotZpn4j1SLrvH
 ```
 
 The options are presented below:
@@ -40,10 +41,10 @@ The options are presented below:
 | MONGO_URI   | the URI string for mongo connection
 | REST_PORT   | rest plugin port
 | RABBIT_URI   | rabbitmq URI connection string
-| BITCOIN_HOST   | bitcoin's node host address
-| BITCOIN_PORT   | bitcoin's node port address
-| BITCOIN_USER   | bitcoin's node username for auth (via rpc)
-| BITCOIN_PASS   | bitcoin's node pass for auth (via rpc)
+| BITCOIN_NETWORK   | bitcoin's network - main, testnet or regtest
+| BITCOIN_DB   | bitcoin's database - memory or leveldb
+| BITCOIN_DB_PATH   | bitcoin's db path (could be ommited, in case you use memory as db)
+| BITCOIN_IPC   | bitcoin's ipc interface name
 
 
 ### Run
@@ -58,17 +59,11 @@ we expose them via rest api. The route system is look like so:
 
 | route | methods | params | description |
 | ------ | ------ | ------ | ------ |
-| /transactions   | GET |  | returns an transaction's collection
-| /account   | POST | account - bitcoin's account | register a new account, whose txs middleware will listen to and save
-
-#### REST guery language
-
-Every collection could be fetched with an additional query. The api use [query-to-mongo-and-back](https://github.com/ega-forever/query-to-mongo-and-back) plugin as a backbone layer between GET request queries and mongo's. For instance, if we want to fetch all recods from transaction's collection, where txid is  a699fd1e28493ce7cd3a9a64d98231c8abe613d00179ee6c44e36b214504b9aa, then we will make a call like that:
-```
-curl http://localhost:8082/transactions?format.txid="a699fd1e28493ce7cd3a9a64d98231c8abe613d00179ee6c44e36b214504b9aa"
-```
-
-For more information about queries, please refer to [query-to-mongo-and-back](https://github.com/ega-forever/query-to-mongo-and-back).
+| /tx/send   | POST | TX - encoded and signed tx  | broadcast a transaction to network
+| /addr   | POST | address - bitcoin's address | register a new address, whose txs middleware will listen to
+| /addr   | DELETE | address - bitcoin's address | deregister an address
+| /{addr}/balance   | GET | | returns a balance for the specified address
+| /{addr}/utxo   | GET | | returns a UTXO for the specified address
 
 ### AMQP service
 

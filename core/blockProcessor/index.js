@@ -27,7 +27,8 @@ const node = new bcoin.fullnode({
   'coinbase-address': config.bitcoin.coinbase
 });
 
-mongoose.connect(config.mongo.uri);
+mongoose.Promise = Promise;
+mongoose.connect(config.mongo.uri, {useMongoClient: true});
 
 const init = async function () {
   let amqpInstance = await amqp.connect(config.rabbit.url);
