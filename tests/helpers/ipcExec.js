@@ -12,7 +12,7 @@ module.exports = async (method, params) => {
   });
 
   await new Promise(res => {
-    ipc.connectTo(config.bitcoin.ipcName, () => {
+    ipc.connectTo(config.bitcoin.ipcName, config.bitcoin.ipcPath, () => {
       ipc.of[config.bitcoin.ipcName].on('connect', res);
     });
   });

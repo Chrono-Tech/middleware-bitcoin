@@ -24,7 +24,7 @@ const init = async node => {
   node.rpc.add('getcoinsbyaddress', node.getCoinsByAddress.bind(node));
   node.rpc.add('getmetabyaddress', node.getMetaByAddress.bind(node));
 
-  ipc.serve(() => {
+  ipc.serve(config.bitcoin.ipcPath, () => {
     ipc.server.on('message', async (data, socket) => {
       try {
         data = JSON.parse(data);

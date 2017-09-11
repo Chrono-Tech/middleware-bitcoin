@@ -8,11 +8,12 @@ module.exports = {
       name: 'block_processor',
       script: 'core/blockProcessor',
       env: {
-        MONGO_URI: 'mongodb://localhost:27017/data',
-        RABBIT_URI: 'amqp://localhost:5672',
+        MONGO_URI: 'mongodb://localhost:32772/data',
+        RABBIT_URI: 'amqp://localhost:32769',
         BITCOIN_NETWORK: 'regtest',
         BITCOIN_DB: 'memory',
         BITCOIN_IPC: 'bitcoin',
+        BITCOIN_IPC_PATH: '/tmp/',
         BITCOIN_ETHERBASE: 'RXjwE6pvdFoR9m81KZKZVotZpn4j1SLrvH'
       }
     },
@@ -20,18 +21,20 @@ module.exports = {
       name: 'balance_processor',
       script: 'core/balanceProcessor',
       env: {
-        MONGO_URI: 'mongodb://localhost:27017/data',
-        RABBIT_URI: 'amqp://localhost:5672',
-        BITCOIN_IPC: 'bitcoin'
+        MONGO_URI: 'mongodb://localhost:32772/data',
+        RABBIT_URI: 'amqp://localhost:32769',
+        BITCOIN_IPC: 'bitcoin',
+        BITCOIN_IPC_PATH: '/tmp/',
       }
     },
     {
       name: 'rest',
       script: 'core/rest',
       env: {
-        MONGO_URI: 'mongodb://localhost:27017/data',
+        MONGO_URI: 'mongodb://localhost:32772/data',
         REST_PORT: 8082,
-        BITCOIN_IPC: 'bitcoin'
+        BITCOIN_IPC: 'bitcoin',
+        BITCOIN_IPC_PATH: '/tmp/'
       }
     }
   ]

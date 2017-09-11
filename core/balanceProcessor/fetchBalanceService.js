@@ -20,7 +20,7 @@ module.exports = async address => {
   });
 
   await new Promise(res => {
-    ipc.connectTo(config.bitcoin.ipcName, () => {
+    ipc.connectTo(config.bitcoin.ipcName, config.bitcoin.ipcPath, () => {
       ipc.of[config.bitcoin.ipcName].on('connect', res);
     });
   });
