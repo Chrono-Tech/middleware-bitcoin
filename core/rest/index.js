@@ -11,7 +11,9 @@ const config = require('../../config'),
  * and addresses manipulation
  */
 
-mongoose.connect(config.mongo.uri);
+mongoose.Promise = Promise;
+mongoose.connect(config.mongo.uri, {useMongoClient: true});
+
 let app = express();
 
 app.use(cors());

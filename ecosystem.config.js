@@ -10,10 +10,11 @@ module.exports = {
       env: {
         MONGO_URI: 'mongodb://localhost:27017/data',
         RABBIT_URI: 'amqp://localhost:5672',
-        BITCOIN_HOST: 'localhost',
-        BITCOIN_PORT: 8332,
-        BITCOIN_USER: 'user',
-        BITCOIN_PASS: 123
+        BITCOIN_NETWORK: 'regtest',
+        BITCOIN_DB: 'memory',
+        BITCOIN_IPC: 'bitcoin',
+        BITCOIN_IPC_PATH: '/tmp/',
+        BITCOIN_ETHERBASE: 'RXjwE6pvdFoR9m81KZKZVotZpn4j1SLrvH'
       }
     },
     {
@@ -22,10 +23,8 @@ module.exports = {
       env: {
         MONGO_URI: 'mongodb://localhost:27017/data',
         RABBIT_URI: 'amqp://localhost:5672',
-        BITCOIN_HOST: 'localhost',
-        BITCOIN_PORT: 8332,
-        BITCOIN_USER: 'user',
-        BITCOIN_PASS: 123
+        BITCOIN_IPC: 'bitcoin',
+        BITCOIN_IPC_PATH: '/tmp/',
       }
     },
     {
@@ -34,10 +33,8 @@ module.exports = {
       env: {
         MONGO_URI: 'mongodb://localhost:27017/data',
         REST_PORT: 8082,
-        BITCOIN_HOST: 'localhost',
-        BITCOIN_PORT: 8332,
-        BITCOIN_USER: 'user',
-        BITCOIN_PASS: 123
+        BITCOIN_IPC: 'bitcoin',
+        BITCOIN_IPC_PATH: '/tmp/'
       }
     }
   ]

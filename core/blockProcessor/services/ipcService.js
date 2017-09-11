@@ -5,6 +5,7 @@ const ipc = require('node-ipc'),
 
 Object.assign(ipc.config, {
   id: config.bitcoin.ipcName,
+  socketRoot: config.bitcoin.ipcPath,
   retry: 1500,
   sync: true,
   silent: true

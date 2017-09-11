@@ -13,10 +13,6 @@ before_install:
   - mongo data --eval 'db.dropDatabase();'
   - sudo apt-get update
   - sudo apt-get install wget python2.7 git-all pkg-config libncurses5-dev libssl-dev libnss3-dev libexpat-dev libc6-dev -y
-  - wget https://bitcoin.org/bin/bitcoin-core-0.14.2/bitcoin-0.14.2-x86_64-linux-gnu.tar.gz -O bitcoin.tar.gz
-  - tar xvfz bitcoin.tar.gz
-  - sudo mv bitcoin-0.14.2/bin/bitcoind /usr/local/bin/bitcoind
-  - bitcoind -server -regtest -rpcport=8332 -rpcconnect=127.0.0.1 -rpcuser=user -rpcpassword=123 > /dev/null &
 
 
 install:
@@ -28,7 +24,7 @@ before_script:
     - cd $TRAVIS_BUILD_DIR && pm2 start ecosystem.config.js
 
 script:
-  - sleep 30 && npm test -- --coverage
+  - sleep 30 && npm test
 
 notifications:
   email: false

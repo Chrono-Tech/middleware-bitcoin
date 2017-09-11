@@ -40,6 +40,7 @@ module.exports = {
     network: process.env.BITCOIN_NETWORK || 'main',
     db: process.env.BITCOIN_DB || 'memory',
     ipcName: process.env.BITCOIN_IPC || 'bitcoin',
+    ipcPath: process.env.BITCOIN_IPC_PATH || '/tmp/',
     coinbase: _.chain(process.env.BITCOIN_ETHERBASE || '')
       .split(',')
       .map(i => i.trim())

@@ -13,7 +13,8 @@ const config = require('../../config'),
  * in received transactions from blockParser via amqp
  */
 
-mongoose.connect(config.mongo.uri);
+mongoose.Promise = Promise;
+mongoose.connect(config.mongo.uri, {useMongoClient: true});
 
 let init = async () => {
   let conn = await amqp.connect(config.rabbit.url);

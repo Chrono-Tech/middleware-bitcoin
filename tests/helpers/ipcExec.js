@@ -1,15 +1,8 @@
 const Promise = require('bluebird'),
   ipc = require('node-ipc'),
-  config = require('../../../config');
+  config = require('../../config');
 
-/**
- * @service
- * @description get balances for an address
- * @param tx - raw transaction
- * @returns {Promise.<[{balances, lastBlockCheck}]>}
- */
-
-module.exports = async tx => {
+module.exports = async (method, params) => {
 
   Object.assign(ipc.config, {
     id: config.bitcoin.ipcName,
@@ -25,19 +18,13 @@ module.exports = async tx => {
     });
   });
 
-
-  let result = await new Promise((res, rej) => {
+  let response = await new Promise((res, rej) => {
     ipc.of[config.bitcoin.ipcName].on('message', data => data.error ? rej(data.error) : res(data.result));
-    ipc.of[config.bitcoin.ipcName].emit('message', JSON.stringify({
-      method: 'sendrawtransaction',
-      params: [tx]
-    })
+    ipc.of[config.bitcoin.ipcName].emit('message', JSON.stringify({method: method, params: params})
     );
   });
 
-
   ipc.disconnect(config.bitcoin.ipcName);
 
-  return result;
-
+  return response;
 };
