@@ -5,6 +5,7 @@ const ipc = require('node-ipc'),
 
 Object.assign(ipc.config, {
   id: config.bitcoin.ipcName,
+  socketRoot: config.bitcoin.ipcPath,
   retry: 1500,
   sync: true,
   silent: true
@@ -24,7 +25,7 @@ const init = async node => {
   node.rpc.add('getcoinsbyaddress', node.getCoinsByAddress.bind(node));
   node.rpc.add('getmetabyaddress', node.getMetaByAddress.bind(node));
 
-  ipc.serve(config.bitcoin.ipcPath, () => {
+  ipc.serve(() => {
     ipc.server.on('message', async (data, socket) => {
       try {
         data = JSON.parse(data);
