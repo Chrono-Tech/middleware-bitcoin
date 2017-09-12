@@ -1,4 +1,6 @@
-const _ = require('lodash');
+const _ = require('lodash'),
+  Promise = require('bluebird'),
+  fetchUTXOService = require('./fetchUTXOService');
 
 /**
  * @service
@@ -7,49 +9,48 @@ const _ = require('lodash');
  * @returns {Promise.<[{balance, account}]>}
  */
 
-module.exports = tx => {
+module.exports = async tx => {
 
-  let outputs = _.chain(tx.outputs)
-    .take(tx.inputs.length)
-    .map((output, i) => ({
-      from: tx.inputs[i].address,
-      to: output.address,
-      amount: output.value
-    }))
-    .filter(d => d.from !== d.to)
-    .value();
+  let coinInput = await Promise.mapSeries(tx.inputs, input => fetchUTXOService(input.address));
+  coinInput = _.flattenDeep(coinInput);
 
-  let addresses = _.chain(outputs)
-    .map(output => [output.from, output.to])
-    .flattenDeep()
+  let inAddresses = _.chain(tx.inputs)
+    .map(input => input.address)
     .uniq()
-    .compact()
-    .value();
-
-  return _.chain(addresses)
     .map(address => {
-
-      let outComeBalance = _.chain(outputs)
-        .filter({from: address})
-        .map(i => i.amount)
+      let inValue = _.chain(coinInput)
+        .filter({address: address})
+        .map(i => _.get(i, 'satoshis', 0))
         .sum()
-        .defaults(0)
         .value();
 
-      let inComeBalance = _.chain(outputs)
-        .filter({to: address})
-        .map(i => i.amount)
+      let outValue = _.chain(tx.outputs)
+        .filter({address: address})
+        .map(out => _.get(out, 'value', 0))
         .sum()
-        .defaults(0)
         .value();
 
       return {
         address: address,
-        balance: inComeBalance - outComeBalance
+        amount: outValue - inValue
       };
-
     })
-    .defaults([])
     .value();
+
+  let outAddresses = _.chain(tx.outputs)
+    .reject(output => _.find(inAddresses, {address: output.address}))
+    .map(output => ({address: output.address, amount: output.value}))
+    .groupBy('address')
+    .map((value, key) => ({
+        address: key,
+        amount: _.chain(value)
+          .map(i => i.amount)
+          .sum()
+          .value()
+      })
+    )
+    .value();
+
+  return _.union(inAddresses, outAddresses);
 
 };

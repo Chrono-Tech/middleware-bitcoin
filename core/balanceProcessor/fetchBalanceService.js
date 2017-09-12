@@ -13,7 +13,7 @@ const Promise = require('bluebird'),
 module.exports = async address => {
 
   Object.assign(ipc.config, {
-    id: config.bitcoin.ipcName,
+    id: new Date(),
     socketRoot: config.bitcoin.ipcPath,
     retry: 1500,
     sync: true,

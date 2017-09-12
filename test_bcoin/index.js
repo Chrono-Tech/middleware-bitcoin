@@ -4,7 +4,6 @@ const ipc = require('node-ipc'),
   bcoin = require('bcoin'),
   Network = require('bcoin/lib/protocol/network'),
   TX = require('bcoin/lib/primitives/tx'),
-  sendCoin = require('./CreateSendCoinTx'),
   config = require('../config');
 
 Object.assign(ipc.config, {
@@ -16,7 +15,7 @@ Object.assign(ipc.config, {
 const init = async () => {
 
   await new Promise(res => {
-    ipc.connectTo('bitcoin', () => {
+    ipc.connectTo('bitcoin_reg', () => {
       ipc.of.bitcoin.on('connect', res);
 
       ipc.of.bitcoin.on('disconnect', () => {
@@ -41,8 +40,18 @@ const init = async () => {
     ipc.of.bitcoin.on('message', data => data.error ? rej() : res(data.result));
     ipc.of.bitcoin.emit('message', JSON.stringify({
       method: 'getcoinsbyaddress',
-      params: [keyPair2.getAddress()]
+      params: [keyPair.getAddress()]
     })
+    );
+  });
+
+
+  let coins2 = await new Promise((res, rej) => {
+    ipc.of.bitcoin.on('message', data => data.error ? rej() : res(data.result));
+    ipc.of.bitcoin.emit('message', JSON.stringify({
+        method: 'getcoinsbyaddress',
+        params: [keyPair2.getAddress()]
+      })
     );
   });
 

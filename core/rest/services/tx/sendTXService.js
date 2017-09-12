@@ -15,7 +15,7 @@ module.exports = async (req, res) => {
 
   let decodedTx = decodeTxService(req.body.tx);
   let result = await pushTxService(req.body.tx);
-  let txBalances = calcTxBalanceService(decodedTx);
+  let txBalances = await calcTxBalanceService(decodedTx);
   for (let txBalance of txBalances) {
     let utxos = await fetchUTXOService(txBalance.address);
     let balances = calcBalanceService(utxos);
