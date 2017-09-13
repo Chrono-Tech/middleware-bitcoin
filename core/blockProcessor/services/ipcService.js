@@ -8,7 +8,8 @@ Object.assign(ipc.config, {
   socketRoot: config.bitcoin.ipcPath,
   retry: 1500,
   sync: true,
-  silent: true
+  silent: true,
+  unlink: false
 });
 
 /**

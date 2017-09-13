@@ -11,7 +11,12 @@ const _ = require('lodash'),
 
 module.exports = async tx => {
 
-  let coinInput = await Promise.mapSeries(tx.inputs, input => fetchUTXOService(input.address));
+  let addresses = _.chain(tx.inputs)
+    .map(input => input.address)
+    .uniq()
+    .value();
+
+  let coinInput = await Promise.mapSeries(addresses, address => fetchUTXOService(address));
   coinInput = _.flattenDeep(coinInput);
 
   let inAddresses = _.chain(tx.inputs)
@@ -19,16 +24,23 @@ module.exports = async tx => {
     .uniq()
     .map(address => {
       let inValue = _.chain(coinInput)
-        .filter({address: address})
+        .filter(input =>
+          input.address === address &&
+          _.find(tx.inputs, inputTx => inputTx.prevout.hash === input.txid)
+        )
         .map(i => _.get(i, 'satoshis', 0))
         .sum()
         .value();
+
+      console.log(inValue);
 
       let outValue = _.chain(tx.outputs)
         .filter({address: address})
         .map(out => _.get(out, 'value', 0))
         .sum()
         .value();
+
+      console.log(outValue)
 
       return {
         address: address,

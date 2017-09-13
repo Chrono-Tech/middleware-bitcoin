@@ -11,24 +11,28 @@ const Promise = require('bluebird'),
 
 module.exports = async tx => {
 
-  Object.assign(ipc.config, {
-    id: config.bitcoin.ipcName,
+  const ipcInstance = new ipc.IPC;
+
+  Object.assign(ipcInstance.config, {
+    id: Date.now(),
     socketRoot: config.bitcoin.ipcPath,
     retry: 1500,
     sync: true,
-    silent: true
+    silent: true,
+    unlink: false
   });
 
+
   await new Promise(res => {
-    ipc.connectTo(config.bitcoin.ipcName, () => {
-      ipc.of[config.bitcoin.ipcName].on('connect', res);
+    ipcInstance.connectTo(config.bitcoin.ipcName, () => {
+      ipcInstance.of[config.bitcoin.ipcName].on('connect', res);
     });
   });
 
 
   let result = await new Promise((res, rej) => {
-    ipc.of[config.bitcoin.ipcName].on('message', data => data.error ? rej(data.error) : res(data.result));
-    ipc.of[config.bitcoin.ipcName].emit('message', JSON.stringify({
+    ipcInstance.of[config.bitcoin.ipcName].on('message', data => data.error ? rej(data.error) : res(data.result));
+    ipcInstance.of[config.bitcoin.ipcName].emit('message', JSON.stringify({
       method: 'sendrawtransaction',
       params: [tx]
     })
@@ -36,7 +40,7 @@ module.exports = async tx => {
   });
 
 
-  ipc.disconnect(config.bitcoin.ipcName);
+  ipcInstance.disconnect(config.bitcoin.ipcName);
 
   return result;
 

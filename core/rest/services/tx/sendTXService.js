@@ -19,9 +19,19 @@ module.exports = async (req, res) => {
   for (let txBalance of txBalances) {
     let utxos = await fetchUTXOService(txBalance.address);
     let balances = calcBalanceService(utxos);
-    _.set(balances, 'balances.confirmations0', txBalance.balance + _.get(balances, 'balances.confirmations6', 0));
+    console.log(txBalance)
+    console.log(balances)
+    _.set(balances, 'balances.confirmations0', txBalance.amount + _.get(balances, 'balances.confirmations6', 0));
     await accountModel.update({address: txBalance.address}, {
-      $set: balances
+      $set: _.transform({
+        'balances.confirmations0': _.get(balances, 'balances.confirmations0'),
+        'balances.confirmations3': _.get(balances, 'balances.confirmations3'),
+        'balances.confirmations6': _.get(balances, 'balances.confirmations6')
+      }, (result, val, key) => {
+        if (val) {
+          result[key] = val;
+        }
+      }, {lastBlockCheck: balances.lastBlockCheck})
     });
   }
 

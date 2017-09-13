@@ -42,4 +42,6 @@ describe('tests', function () {
 
   describe('core/balanceProcessor', () => coreTests.balanceProcessor(ctx));
 
+  describe('core/rest', () => coreTests.rest(ctx));
+
 });
