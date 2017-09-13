@@ -1,5 +1,7 @@
 const Promise = require('bluebird'),
   ipc = require('node-ipc'),
+  Coin = require('bcoin/lib/primitives/coin'),
+  Network = require('bcoin/lib/protocol/network'),
   config = require('../../../config');
 
 /**
@@ -15,49 +17,59 @@ const Promise = require('bluebird'),
  *     confirmations: *}]>}
  */
 
+
 module.exports = async address => {
 
-  Object.assign(ipc.config, {
-    id: config.bitcoin.ipcName,
+  const ipcInstance = new ipc.IPC;
+
+  Object.assign(ipcInstance.config, {
+    id: Date.now(),
     socketRoot: config.bitcoin.ipcPath,
     retry: 1500,
     sync: true,
-    silent: true
+    silent: true,
+    unlink: false
   });
 
+
+  let network = Network.get(config.bitcoin.network);
+
   await new Promise(res => {
-    ipc.connectTo(config.bitcoin.ipcName, () => {
-      ipc.of[config.bitcoin.ipcName].on('connect', res);
+    ipcInstance.connectTo(config.bitcoin.ipcName, () => {
+      ipcInstance.of[config.bitcoin.ipcName].on('connect', res);
     });
   });
 
-  let coins = await new Promise((res, rej) => {
-    ipc.of[config.bitcoin.ipcName].on('message', data => data.error ? rej(data.error) : res(data.result));
-    ipc.of[config.bitcoin.ipcName].emit('message', JSON.stringify({
-      method: 'getcoinsbyaddress',
-      params: [address]
-    })
+  let rawCoins = await new Promise((res, rej) => {
+    ipcInstance.of[config.bitcoin.ipcName].on('message', data => data.error ? rej(data.error) : res(data.result));
+    ipcInstance.of[config.bitcoin.ipcName].emit('message', JSON.stringify({
+        method: 'getcoinsbyaddress',
+        params: [address]
+      })
     );
   });
 
   let height = await new Promise((res, rej) => {
-    ipc.of[config.bitcoin.ipcName].on('message', data => data.error ? rej(data.error) : res(data.result));
-    ipc.of[config.bitcoin.ipcName].emit('message', JSON.stringify({
-      method: 'getblockcount',
-      params: []
-    })
+    ipcInstance.of[config.bitcoin.ipcName].on('message', data => data.error ? rej(data.error) : res(data.result));
+    ipcInstance.of[config.bitcoin.ipcName].emit('message', JSON.stringify({
+        method: 'getblockcount',
+        params: []
+      })
     );
   });
 
-  ipc.disconnect(config.bitcoin.ipcName);
+  ipcInstance.disconnect(config.bitcoin.ipcName);
 
-  return coins.map(coin => ({
-    address: coin.address,
-    txid: coin.hash,
-    scriptPubKey: coin.script,
-    amount: coin.value / 100000000,
-    satoshis: coin.value,
-    height: coin.height,
-    confirmations: height - coin.height
-  }));
+  return rawCoins.map(rawCoin => {
+    let coin = Coin.fromJSON(rawCoin).getJSON(network);
+    return ({
+      address: coin.address,
+      txid: coin.hash,
+      scriptPubKey: coin.script,
+      amount: coin.value / 100000000,
+      satoshis: coin.value,
+      height: coin.height,
+      confirmations: height - coin.height
+    });
+  });
 };

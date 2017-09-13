@@ -40,23 +40,15 @@ let init = async () => {
   channel.prefetch(2);
 
   channel.consume('app_bitcoin.balance_processor.block', async data => {
-    let payload;
     try {
-      payload = JSON.parse(data.content.toString());
-    } catch (e) {
-      log.error(e);
-      channel.ack(data);
-      return;
-    }
+      let payload = JSON.parse(data.content.toString());
+      let accounts = await accountModel.find({
+        $where: 'obj.balances && !(obj.balances.confirmations0 === obj.balances.confirmations3 && ' +
+        'obj.balances.confirmations3 ===  obj.balances.confirmations6)',
+        lastBlockCheck: {$lt: payload.block}
+      });
 
-    let accounts = await accountModel.find({
-      $where: 'obj.balances && !(obj.balances.confirmations0 === obj.balances.confirmations3 && ' +
-      'obj.balances.confirmations3 ===  obj.balances.confirmations6)',
-      lastBlockCheck: {$lt: payload.block}
-    });
-
-    for (let account of accounts) {
-      try {
+      for (let account of accounts) {
         let balances = await fetchBalanceService(account.address);
         await accountModel.update({address: account.address}, {
           $set: _.transform({
@@ -70,25 +62,18 @@ let init = async () => {
           }, {lastBlockCheck: balances.lastBlockCheck})
         });
         channel.publish('events', `bitcoin_balance.${account.address}`, new Buffer(JSON.stringify({balances: balances.balances})));
-      } catch (e) {
-        log.error(e);
       }
+
+    } catch (e) {
+      log.error(e);
     }
 
     channel.ack(data);
   });
 
   channel.consume('app_bitcoin.balance_processor.tx', async (data) => {
-    let payload;
     try {
-      payload = JSON.parse(data.content.toString());
-    } catch (e) {
-      channel.ack(data);
-      log.error(e);
-      return;
-    }
-
-    try {
+      let payload = JSON.parse(data.content.toString());
       let balances = await fetchBalanceService(payload.address);
       await accountModel.update({address: payload.address, lastBlockCheck: {$lt: balances.lastBlockCheck}}, {
           $set: _.transform({
@@ -103,7 +88,7 @@ let init = async () => {
         }
       );
       channel.publish('events', `bitcoin_balance.${payload.address}`, new Buffer(JSON.stringify({balances: balances.balances})));
-      log.info(`balance updated with: ${JSON.stringify(balances)} for ${payload.address}`);
+      log.info(`balance updated for ${payload.address}`);
     } catch (e) {
       log.error(e);
     }

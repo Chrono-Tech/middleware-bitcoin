@@ -10,25 +10,31 @@ const Promise = require('bluebird'),
  * @returns {Promise.<[{balances, lastBlockCheck}]>}
  */
 
+
 module.exports = async address => {
 
-  Object.assign(ipc.config, {
-    id: config.bitcoin.ipcName,
+
+  const ipcInstance = new ipc.IPC;
+
+  Object.assign(ipcInstance.config, {
+    id: Date.now(),
     socketRoot: config.bitcoin.ipcPath,
     retry: 1500,
     sync: true,
-    silent: true
+    silent: true,
+    unlink: false
   });
 
+
   await new Promise(res => {
-    ipc.connectTo(config.bitcoin.ipcName, () => {
-      ipc.of[config.bitcoin.ipcName].on('connect', res);
+    ipcInstance.connectTo(config.bitcoin.ipcName, () => {
+      ipcInstance.of[config.bitcoin.ipcName].on('connect', res);
     });
   });
 
   let coins = await new Promise((res, rej) => {
-    ipc.of[config.bitcoin.ipcName].on('message', data => data.error ? rej(data.error) : res(data.result));
-    ipc.of[config.bitcoin.ipcName].emit('message', JSON.stringify({
+    ipcInstance.of[config.bitcoin.ipcName].on('message', data => data.error ? rej(data.error) : res(data.result));
+    ipcInstance.of[config.bitcoin.ipcName].emit('message', JSON.stringify({
       method: 'getcoinsbyaddress',
       params: [address]
     })
@@ -36,8 +42,8 @@ module.exports = async address => {
   });
 
   let height = await new Promise((res, rej) => {
-    ipc.of[config.bitcoin.ipcName].on('message', data => data.error ? rej(data.error) : res(data.result));
-    ipc.of[config.bitcoin.ipcName].emit('message', JSON.stringify({
+    ipcInstance.of[config.bitcoin.ipcName].on('message', data => data.error ? rej(data.error) : res(data.result));
+    ipcInstance.of[config.bitcoin.ipcName].emit('message', JSON.stringify({
       method: 'getblockcount',
       params: []
     })
@@ -70,7 +76,7 @@ module.exports = async address => {
     _.merge(balances, {confirmations0: sum});
   }
 
-  ipc.disconnect(config.bitcoin.ipcName);
+  ipcInstance.disconnect(config.bitcoin.ipcName);
 
   return {
     balances: balances,
