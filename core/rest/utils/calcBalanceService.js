@@ -18,25 +18,25 @@ module.exports = utxos => {
     })
     .value();
 
-  let sum = _.chain(utxos)
-    .map(coin => coin.satoshis)
-    .sum()
-    .defaultTo(0)
-    .value();
-
-  let balances = {};
-
-  if (highestCoin.confirmations >= 6) {
-    _.merge(balances, {confirmations0: sum, confirmations3: sum, confirmations6: sum});
-  }
-
-  if (3 <= highestCoin.confirmations && highestCoin.confirmations < 6) {
-    _.merge(balances, {confirmations0: sum, confirmations3: sum});
-  }
-
-  if (highestCoin.confirmations < 3) {
-    _.merge(balances, {confirmations0: sum});
-  }
+  let balances = {
+    confirmations0: _.chain(utxos)
+      .map(coin => coin.satoshis)
+      .sum()
+      .defaultTo(0)
+      .value(),
+    confirmations3: _.chain(utxos)
+      .filter(coin => coin.confirmations >= 3 && coin.confirmations < 6)
+      .map(coin => coin.satoshis)
+      .sum()
+      .defaultTo(0)
+      .value(),
+    confirmations6: _.chain(utxos)
+      .filter(coin => coin.confirmations >= 6)
+      .map(coin => coin.satoshis)
+      .sum()
+      .defaultTo(0)
+      .value()
+  };
 
   return {
     balances: balances,

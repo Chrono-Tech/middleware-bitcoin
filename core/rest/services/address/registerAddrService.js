@@ -16,17 +16,15 @@ module.exports = async (req, res) => {
     return res.send(messages.fail);
   }
 
-  let utxos = await fetchUTXOService(req.body.address);
-  let balances = calcBalanceService(utxos);
+  try {
+    let utxos = await fetchUTXOService(req.body.address);
+    let balances = calcBalanceService(utxos);
+    account.balances.confirmations6 = _.get(balances, 'balances.confirmations6', 0);
+    account.lastBlockCheck = balances.lastBlockCheck;
+    await account.save();
 
-  account.balances = _.merge({
-    confirmations0: 0,
-    confirmations3: 0,
-    confirmations6: 0
-  }, balances.balances);
-  account.lastBlockCheck = balances.lastBlockCheck;
-  await account.save();
-
-  res.send(messages.success);
-
+    res.send(messages.success);
+  } catch (e) {
+    res.send(messages.fail);
+  }
 };

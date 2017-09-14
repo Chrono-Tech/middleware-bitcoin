@@ -93,7 +93,6 @@ let init = async () => {
       log.error(e);
     }
 
-    console.log('acc');
     channel.ack(data);
   });
 

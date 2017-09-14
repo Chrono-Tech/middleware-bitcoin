@@ -14,16 +14,20 @@ module.exports = async (req, res) => {
   }
 
   let decodedTx = decodeTxService(req.body.tx);
-  let result = await pushTxService(req.body.tx);
   let txBalances = await calcTxBalanceService(decodedTx);
   for (let txBalance of txBalances) {
     let utxos = await fetchUTXOService(txBalance.address);
     let balances = calcBalanceService(utxos);
-    _.set(balances, 'balances.confirmations0', txBalance.balance + _.get(balances, 'balances.confirmations6', 0));
+    _.set(balances, 'balances.confirmations0', txBalance.amount + _.get(balances, 'balances.confirmations6', 0));
     await accountModel.update({address: txBalance.address}, {
-      $set: balances
+      $set: {
+        'balances.confirmations0': _.get(balances, 'balances.confirmations0'),
+        lastBlockCheck: balances.lastBlockCheck
+      }
     });
   }
+
+  let result = await pushTxService(req.body.tx);
 
   res.send(result);
 };
