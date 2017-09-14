@@ -28,8 +28,9 @@ describe('tests', function () {
     let keyPair = bcoin.hd.generate();
     let keyPair2 = bcoin.hd.generate();
     let keyPair3 = bcoin.hd.generate();
+    let keyPair4 = bcoin.hd.generate();
 
-    ctx.accounts.push(keyPair, keyPair2, keyPair3);
+    ctx.accounts.push(keyPair, keyPair2, keyPair3, keyPair4);
 
     mongoose.connect(config.mongo.uri, {useMongoClient: true});
   });

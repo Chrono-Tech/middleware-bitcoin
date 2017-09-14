@@ -20,7 +20,6 @@ module.exports = utxos => {
 
   let balances = {
     confirmations0: _.chain(utxos)
-      .filter(coin => coin.confirmations)
       .map(coin => coin.satoshis)
       .sum()
       .defaultTo(0)

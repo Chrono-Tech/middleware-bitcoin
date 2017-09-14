@@ -6,7 +6,6 @@ const config = require('../../config'),
   Promise = require('bluebird'),
   bcoin = require('bcoin'),
   Coin = require('bcoin/lib/primitives/coin'),
-  shared = require('../shared'),
   scope = {};
 
 module.exports = (ctx) => {
@@ -16,10 +15,14 @@ module.exports = (ctx) => {
     let keyring = new bcoin.keyring(ctx.accounts[0].privateKey, ctx.network);
     let keyring2 = new bcoin.keyring(ctx.accounts[1].privateKey, ctx.network);
     let keyring3 = new bcoin.keyring(ctx.accounts[2].privateKey, ctx.network);
+    let keyring4 = new bcoin.keyring(ctx.accounts[3].privateKey, ctx.network);
 
     return await accountModel.remove({
       address: {
-        $in: [keyring.getAddress().toString(), keyring2.getAddress().toString(), keyring3.getAddress().toString()]
+        $in: [keyring.getAddress().toString(),
+          keyring2.getAddress().toString(),
+          keyring3.getAddress().toString(),
+          keyring4.getAddress().toString()]
       }
     })
   });
