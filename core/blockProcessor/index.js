@@ -6,7 +6,9 @@ const bcoin = require('bcoin'),
   amqp = require('amqplib'),
   memwatch = require('memwatch-next'),
   bunyan = require('bunyan'),
+  bccNetwork = require('./networks/bccNetwork'),
   log = bunyan.createLogger({name: 'core.blockProcessor'}),
+  networks = require('bcoin/lib/protocol/networks'),
   config = require('../../config');
 
 /**
@@ -15,9 +17,12 @@ const bcoin = require('bcoin'),
  * services about new block or tx, where we meet registered address
  */
 
+networks.types.push('bcc');
+networks.bcc = bccNetwork;
 
 const node = new bcoin.fullnode({
-  network: config.bitcoin.network,
+  //network: config.bitcoin.network,
+  network: 'bcc',
   db: config.bitcoin.db,
   prefix: config.bitcoin.dbpath,
   spv: true,
@@ -26,6 +31,9 @@ const node = new bcoin.fullnode({
   'log-level': 'info',
   'coinbase-address': config.bitcoin.coinbase
 });
+
+
+console.log(node.network);
 
 mongoose.Promise = Promise;
 mongoose.connect(config.mongo.uri, {useMongoClient: true});
