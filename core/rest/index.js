@@ -8,10 +8,12 @@ const config = require('../../config'),
 /**
  * @module entry point
  * @description expose an express web server for txs
- * and accounts manipulation
+ * and addresses manipulation
  */
 
-mongoose.connect(config.mongo.uri);
+mongoose.Promise = Promise;
+mongoose.connect(config.mongo.uri, {useMongoClient: true});
+
 let app = express();
 
 app.use(cors());

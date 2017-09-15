@@ -5,18 +5,30 @@ const bcoin = require('bcoin'),
   mongoose = require('mongoose'),
   amqp = require('amqplib'),
   memwatch = require('memwatch-next'),
+  bunyan = require('bunyan'),
+  log = bunyan.createLogger({name: 'core.blockProcessor'}),
   config = require('../../config');
+
+/**
+ * @module entry point
+ * @description process blocks, and notify, through rabbitmq, other
+ * services about new block or tx, where we meet registered address
+ */
+
 
 const node = new bcoin.fullnode({
   network: config.bitcoin.network,
-  db: 'leveldb',
+  db: config.bitcoin.db,
   prefix: config.bitcoin.dbpath,
   spv: true,
   indexTX: true,
-  indexAddress: true
+  indexAddress: true,
+  'log-level': 'info',
+  'coinbase-address': config.bitcoin.coinbase
 });
 
-mongoose.connect(config.mongo.uri);
+mongoose.Promise = Promise;
+mongoose.connect(config.mongo.uri, {useMongoClient: true});
 
 const init = async function () {
   let amqpInstance = await amqp.connect(config.rabbit.url);
@@ -24,27 +36,23 @@ const init = async function () {
   await node.connect();
 
   memwatch.on('leak', () => {
-    console.log('leak');
+    log.info('leak');
 
-    if (!node.pool.syncing)
+    if (!node.pool.syncing) {
       return;
-
-    try{
-      node.stopSync();
-    }catch (e){
-     console.log(node.pool.syncing);
     }
 
-    setTimeout(()=>node.startSync(), 60000);
+    try {
+      node.stopSync();
+    } catch (e) {
+    }
+
+    setTimeout(() => node.startSync(), 60000);
   });
 
-
-  node.on('connect', function(entry, block) {
-    console.log('%s (%d) added to chain.', entry.rhash(), entry.height);
-  });
-
-  node.on('block', async function (block) {
-
+  node.on('connect', async (entry, block) => {
+    log.info('%s (%d) added to chain.', entry.rhash(), entry.height);
+    eventsEmitterService(amqpInstance, 'bitcoin_block', {block: entry.height});
     let filtered = await filterAccountsService(block);
 
     await Promise.all(filtered.map(item =>

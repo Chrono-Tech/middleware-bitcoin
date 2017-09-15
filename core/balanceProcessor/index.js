@@ -1,78 +1,98 @@
 const config = require('../../config'),
   mongoose = require('mongoose'),
-  transactionModel = require('../../models/transactionModel'),
+  fetchBalanceService = require('./fetchBalanceService'),
   accountModel = require('../../models/accountModel'),
-  _ = require('lodash'),
   bunyan = require('bunyan'),
+  _ = require('lodash'),
   log = bunyan.createLogger({name: 'core.balanceProcessor'}),
-  ipc = require('node-ipc'),
   amqp = require('amqplib');
 
 /**
  * @module entry point
- * @description update balances for accounts, which addresses were specified
+ * @description update balances for addresses, which were specified
  * in received transactions from blockParser via amqp
  */
 
-Object.assign(ipc.config, {
-  id: config.bitcoin.ipcName,
-  retry: 1500,
-  silent: true
-});
-
-mongoose.connect(config.mongo.uri);
+mongoose.Promise = Promise;
+mongoose.connect(config.mongo.uri, {useMongoClient: true});
 
 let init = async () => {
   let conn = await amqp.connect(config.rabbit.url);
   let channel = await conn.createChannel();
-  await new Promise(res => {
-    ipc.connectTo(config.bitcoin.ipcName, () => {
-      ipc.of[config.bitcoin.ipcName].on('connect', res);
-
-      ipc.of[config.bitcoin.ipcName].on('disconnect', () => {
-        process.exit(-1);
-      });
-
-    });
-  });
 
   try {
     await channel.assertExchange('events', 'topic', {durable: false});
-    await channel.assertQueue('app_bitcoin.balance_processor');
-    await channel.bindQueue('app_bitcoin.balance_processor', 'events', 'bitcoin_transaction.*');
+    await channel.assertQueue('app_bitcoin.balance_processor.tx');
+    await channel.bindQueue('app_bitcoin.balance_processor.tx', 'events', 'bitcoin_transaction.*');
+  } catch (e) {
+    log.error(e);
+    channel = await conn.createChannel();
+  }
+
+  try {
+    await channel.assertQueue('app_bitcoin.balance_processor.block');
+    await channel.bindQueue('app_bitcoin.balance_processor.block', 'events', 'bitcoin_block');
   } catch (e) {
     log.error(e);
     channel = await conn.createChannel();
   }
 
   channel.prefetch(2);
-  channel.consume('app_bitcoin.balance_processor', async (data) => {
-    let payload;
+
+  channel.consume('app_bitcoin.balance_processor.block', async data => {
     try {
-      payload = JSON.parse(data.content.toString());
+      let payload = JSON.parse(data.content.toString());
+      let accounts = await accountModel.find({
+        $where: 'obj.balances && !(obj.balances.confirmations0 === obj.balances.confirmations3 && ' +
+        'obj.balances.confirmations3 ===  obj.balances.confirmations6)',
+        lastBlockCheck: {$lt: payload.block}
+      });
+
+      for (let account of accounts) {
+        let balances = await fetchBalanceService(account.address);
+        await accountModel.update({address: account.address}, {
+          $set: _.transform({
+            'balances.confirmations0': _.get(balances, 'balances.confirmations0'),
+            'balances.confirmations3': _.get(balances, 'balances.confirmations3'),
+            'balances.confirmations6': _.get(balances, 'balances.confirmations6')
+          }, (result, val, key) => {
+            if (val) {
+              result[key] = val;
+            }
+          }, {lastBlockCheck: balances.lastBlockCheck})
+        });
+        channel.publish('events', `bitcoin_balance.${account.address}`, new Buffer(JSON.stringify({balances: balances.balances})));
+      }
+
     } catch (e) {
       log.error(e);
-      return;
     }
 
-    let coins = await new Promise(res => {
-      ipc.of.bitcoin.on('message', res);
-      ipc.of.bitcoin.emit('message', JSON.stringify({
-          method: 'getcoinsbyaddress',
-          params: [payload.address]
-        })
+    channel.ack(data);
+  });
+
+  channel.consume('app_bitcoin.balance_processor.tx', async (data) => {
+    try {
+      let payload = JSON.parse(data.content.toString());
+      let balances = await fetchBalanceService(payload.address);
+      await accountModel.update({address: payload.address, lastBlockCheck: {$lt: balances.lastBlockCheck}}, {
+          $set: _.transform({
+            'balances.confirmations0': _.get(balances, 'balances.confirmations0'),
+            'balances.confirmations3': _.get(balances, 'balances.confirmations3'),
+            'balances.confirmations6': _.get(balances, 'balances.confirmations6')
+          }, (result, val, key) => {
+            if (val) {
+              result[key] = val;
+            }
+          }, {lastBlockCheck: balances.lastBlockCheck})
+        }
       );
-    });
+      channel.publish('events', `bitcoin_balance.${payload.address}`, new Buffer(JSON.stringify({balances: balances.balances})));
+      log.info(`balance updated for ${payload.address}`);
+    } catch (e) {
+      log.error(e);
+    }
 
-    let balance = _.chain(coins)
-      .map(coin => coin.value)
-      .sum()
-      .defaultTo(0)
-      .value();
-
-    console.log(`balance updated with: ${balance} for ${payload.address}`);
-    await accountModel.update({address: payload.address}, {$set: {balance: balance}});
-    channel.publish('events', `bitcoin_balance.${payload.address}`, new Buffer(JSON.stringify({balance: balance})));
     channel.ack(data);
   });
 
