@@ -23,13 +23,14 @@ networks.bcc = bccNetwork;
 const node = new bcoin.fullnode({
   //network: config.bitcoin.network,
   network: 'bcc',
-  db: config.bitcoin.db,
-  prefix: config.bitcoin.dbpath,
-  spv: true,
-  indexTX: true,
-  indexAddress: true,
-  'log-level': 'info',
-  'coinbase-address': config.bitcoin.coinbase
+  db: 'memory',
+  //db: config.bitcoin.db,
+  //prefix: config.bitcoin.dbpath,
+//  spv: true,
+//  indexTX: true,
+//  indexAddress: true,
+  'log-level': 'debug',
+  //'coinbase-address': config.bitcoin.coinbase
 });
 
 
