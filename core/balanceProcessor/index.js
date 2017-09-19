@@ -22,16 +22,16 @@ let init = async () => {
 
   try {
     await channel.assertExchange('events', 'topic', {durable: false});
-    await channel.assertQueue('app_bitcoin.balance_processor.tx');
-    await channel.bindQueue('app_bitcoin.balance_processor.tx', 'events', 'bitcoin_transaction.*');
+    await channel.assertQueue(`app_${config.rabbit.serviceName}.balance_processor.tx`);
+    await channel.bindQueue(`app_${config.rabbit.serviceName}.balance_processor.tx`, 'events', 'bitcoin_transaction.*');
   } catch (e) {
     log.error(e);
     channel = await conn.createChannel();
   }
 
   try {
-    await channel.assertQueue('app_bitcoin.balance_processor.block');
-    await channel.bindQueue('app_bitcoin.balance_processor.block', 'events', 'bitcoin_block');
+    await channel.assertQueue(`app_${config.rabbit.serviceName}.balance_processor.block`);
+    await channel.bindQueue(`app_${config.rabbit.serviceName}.balance_processor.block`, 'events', `${config.rabbit.serviceName}_block`);
   } catch (e) {
     log.error(e);
     channel = await conn.createChannel();
@@ -39,7 +39,7 @@ let init = async () => {
 
   channel.prefetch(2);
 
-  channel.consume('app_bitcoin.balance_processor.block', async data => {
+  channel.consume(`app_${config.rabbit.serviceName}.balance_processor.block`, async data => {
     try {
       let payload = JSON.parse(data.content.toString());
       let accounts = await accountModel.find({
@@ -61,7 +61,7 @@ let init = async () => {
             }
           }, {lastBlockCheck: balances.lastBlockCheck})
         });
-        channel.publish('events', `bitcoin_balance.${account.address}`, new Buffer(JSON.stringify({balances: balances.balances})));
+        channel.publish('events', `${config.rabbit.serviceName}_balance.${account.address}`, new Buffer(JSON.stringify({balances: balances.balances})));
       }
 
     } catch (e) {
@@ -71,7 +71,7 @@ let init = async () => {
     channel.ack(data);
   });
 
-  channel.consume('app_bitcoin.balance_processor.tx', async (data) => {
+  channel.consume(`app_${config.rabbit.serviceName}.balance_processor.tx`, async (data) => {
     try {
       let payload = JSON.parse(data.content.toString());
       let balances = await fetchBalanceService(payload.address);

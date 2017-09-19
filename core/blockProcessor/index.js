@@ -6,7 +6,7 @@ const bcoin = require('bcoin'),
   amqp = require('amqplib'),
   memwatch = require('memwatch-next'),
   bunyan = require('bunyan'),
-  bccNetwork = require('./networks/bccNetwork'),
+  customNetworkRegistrator = require('./networks'),
   log = bunyan.createLogger({name: 'core.blockProcessor'}),
   networks = require('bcoin/lib/protocol/networks'),
   config = require('../../config');
@@ -17,24 +17,18 @@ const bcoin = require('bcoin'),
  * services about new block or tx, where we meet registered address
  */
 
-networks.types.push('bcc');
-networks.bcc = bccNetwork;
+customNetworkRegistrator(networks);
 
 const node = new bcoin.fullnode({
-  //network: config.bitcoin.network,
-  network: 'bcc',
-  db: 'memory',
-  //db: config.bitcoin.db,
-  //prefix: config.bitcoin.dbpath,
-//  spv: true,
-//  indexTX: true,
-//  indexAddress: true,
+  network: config.bitcoin.network,
+  db: config.bitcoin.db,
+  prefix: config.bitcoin.dbpath,
+  spv: true,
+  indexTX: true,
+  indexAddress: true,
   'log-level': 'debug',
-  //'coinbase-address': config.bitcoin.coinbase
+  'coinbase-address': config.bitcoin.coinbase
 });
-
-
-console.log(node.network);
 
 mongoose.Promise = Promise;
 mongoose.connect(config.mongo.uri, {useMongoClient: true});
@@ -61,11 +55,11 @@ const init = async function () {
 
   node.on('connect', async (entry, block) => {
     log.info('%s (%d) added to chain.', entry.rhash(), entry.height);
-    eventsEmitterService(amqpInstance, 'bitcoin_block', {block: entry.height});
+    eventsEmitterService(amqpInstance, `${config.rabbit.serviceName}_block`, {block: entry.height});
     let filtered = await filterAccountsService(block);
 
     await Promise.all(filtered.map(item =>
-      eventsEmitterService(amqpInstance, `bitcoin_transaction.${item.address}`, item)
+      eventsEmitterService(amqpInstance, `${config.rabbit.serviceName}_transaction.${item.address}`, item)
     ));
 
   });

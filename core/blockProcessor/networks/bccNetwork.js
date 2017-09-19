@@ -63,10 +63,8 @@ bccnet.seeds = [
 
 ];
 
-bccnet.magic = 0x0709110b;
-
+bccnet.magic = 0xd9b4bef9;
 bccnet.port = 8333;
-
 bccnet.checkpointMap = {
   11111: util.revHex('0000000069e244f73d78e8fd29ba2fd2ed618bd6fa2ee92559f542fdb26e7c1d'),
   33333: util.revHex('000000002dd5588a74784eaa7ab0507a18ad16a236e7b1ce69f00d7ddfb5d0a6'),
@@ -91,7 +89,6 @@ bccnet.halvingInterval = 210000;
 bccnet.genesis = block.toHeaders();
 bccnet.genesisBlock = block.toRaw().toString('hex');
 
-console.log(bccnet.genesisBlock)
 bccnet.pow = {
   limit: new BN(
     '00000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffff',
