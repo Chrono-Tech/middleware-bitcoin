@@ -8,7 +8,6 @@ const bcoin = require('bcoin'),
   bunyan = require('bunyan'),
   customNetworkRegistrator = require('./networks'),
   log = bunyan.createLogger({name: 'core.blockProcessor'}),
-  networks = require('bcoin/lib/protocol/networks'),
   config = require('../../config');
 
 /**
@@ -17,7 +16,7 @@ const bcoin = require('bcoin'),
  * services about new block or tx, where we meet registered address
  */
 
-customNetworkRegistrator(networks);
+customNetworkRegistrator(config.bitcoin.network);
 
 const node = new bcoin.fullnode({
   network: config.bitcoin.network,
