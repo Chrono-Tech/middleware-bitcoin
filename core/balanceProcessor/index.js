@@ -23,7 +23,7 @@ let init = async () => {
   try {
     await channel.assertExchange('events', 'topic', {durable: false});
     await channel.assertQueue(`app_${config.rabbit.serviceName}.balance_processor.tx`);
-    await channel.bindQueue(`app_${config.rabbit.serviceName}.balance_processor.tx`, 'events', 'bitcoin_transaction.*');
+    await channel.bindQueue(`app_${config.rabbit.serviceName}.balance_processor.tx`, 'events', `${config.rabbit.serviceName}_transaction.*`);
   } catch (e) {
     log.error(e);
     channel = await conn.createChannel();
@@ -87,7 +87,7 @@ let init = async () => {
           }, {lastBlockCheck: balances.lastBlockCheck})
         }
       );
-      channel.publish('events', `bitcoin_balance.${payload.address}`, new Buffer(JSON.stringify({balances: balances.balances})));
+      channel.publish('events', `${config.rabbit.serviceName}_balance.${payload.address}`, new Buffer(JSON.stringify({balances: balances.balances})));
       log.info(`balance updated for ${payload.address}`);
     } catch (e) {
       log.error(e);
