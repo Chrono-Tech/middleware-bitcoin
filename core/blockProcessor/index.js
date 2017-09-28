@@ -6,6 +6,7 @@ const bcoin = require('bcoin'),
   amqp = require('amqplib'),
   memwatch = require('memwatch-next'),
   bunyan = require('bunyan'),
+  customNetworkRegistrator = require('./networks'),
   log = bunyan.createLogger({name: 'core.blockProcessor'}),
   config = require('../../config');
 
@@ -15,6 +16,7 @@ const bcoin = require('bcoin'),
  * services about new block or tx, where we meet registered address
  */
 
+customNetworkRegistrator(config.bitcoin.network);
 
 const node = new bcoin.fullnode({
   network: config.bitcoin.network,
@@ -23,7 +25,7 @@ const node = new bcoin.fullnode({
   spv: true,
   indexTX: true,
   indexAddress: true,
-  'log-level': 'info',
+  'log-level': 'debug',
   'coinbase-address': config.bitcoin.coinbase
 });
 
@@ -52,11 +54,11 @@ const init = async function () {
 
   node.on('connect', async (entry, block) => {
     log.info('%s (%d) added to chain.', entry.rhash(), entry.height);
-    eventsEmitterService(amqpInstance, 'bitcoin_block', {block: entry.height});
+    eventsEmitterService(amqpInstance, `${config.rabbit.serviceName}_block`, {block: entry.height});
     let filtered = await filterAccountsService(block);
 
     await Promise.all(filtered.map(item =>
-      eventsEmitterService(amqpInstance, `bitcoin_transaction.${item.address}`, item)
+      eventsEmitterService(amqpInstance, `${config.rabbit.serviceName}_transaction.${item.address}`, Object.assign(item, {block: entry.height}))
     ));
 
   });

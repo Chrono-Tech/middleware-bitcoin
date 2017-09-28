@@ -1,13 +1,21 @@
 const Promise = require('bluebird'),
   ipc = require('node-ipc'),
+  Coin = require('bcoin/lib/primitives/coin'),
+  Network = require('bcoin/lib/protocol/network'),
   config = require('../../config'),
   _ = require('lodash');
 
 /**
  * @service
- * @description get balances for an address
+ * @description get utxos for a specified address
  * @param address - registered address
- * @returns {Promise.<[{balances, lastBlockCheck}]>}
+ * @returns {Promise.<[{address: *,
+ *     txid: *,
+ *     scriptPubKey: *,
+ *     amount: *,
+ *     satoshis: *,
+ *     height: *,
+ *     confirmations: *}]>}
  */
 
 
@@ -23,6 +31,8 @@ module.exports = async address => {
     silent: true,
     unlink: false
   });
+
+  let network = Network.get(config.bitcoin.network);
 
   await new Promise(res => {
     ipcInstance.connectTo(config.bitcoin.ipcName, () => {
@@ -48,32 +58,21 @@ module.exports = async address => {
     );
   });
 
-  let balances = {
-    confirmations0: _.chain(rawCoins)
-      .filter(c => c.height > -1)
-      .map(coin => coin.value)
-      .sum()
-      .defaultTo(0)
-      .value(),
-    confirmations3: _.chain(rawCoins)
-      .filter(c => c.height > -1 && height - c.height >= 3)
-      .map(coin => coin.value)
-      .sum()
-      .defaultTo(0)
-      .value(),
-    confirmations6: _.chain(rawCoins)
-      .filter(c => c.height > -1 && height - c.height >= 6)
-      .map(coin => coin.value)
-      .sum()
-      .defaultTo(0)
-      .value()
-  };
-
   ipcInstance.disconnect(config.bitcoin.ipcName);
 
-  return {
-    balances: balances,
-    lastBlockCheck: height
-  };
-
+  return _.chain(rawCoins)
+    .filter(c => c.height > -1)
+    .map(rawCoin => {
+      let coin = Coin.fromJSON(rawCoin).getJSON(network);
+      return ({
+        address: coin.address,
+        txid: coin.hash,
+        scriptPubKey: coin.script,
+        amount: coin.value / 100000000,
+        satoshis: coin.value,
+        height: coin.height,
+        confirmations: height - coin.height
+      });
+    })
+    .value();
 };
