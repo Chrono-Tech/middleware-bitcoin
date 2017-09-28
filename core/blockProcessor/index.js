@@ -58,7 +58,7 @@ const init = async function () {
     let filtered = await filterAccountsService(block);
 
     await Promise.all(filtered.map(item =>
-      eventsEmitterService(amqpInstance, `${config.rabbit.serviceName}_transaction.${item.address}`, item)
+      eventsEmitterService(amqpInstance, `${config.rabbit.serviceName}_transaction.${item.address}`, Object.assign(item, {block: entry.height}))
     ));
 
   });

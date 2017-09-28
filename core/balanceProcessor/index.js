@@ -42,8 +42,6 @@ let init = async () => {
   channel.prefetch(2);
 
   channel.consume(`app_${config.rabbit.serviceName}.balance_processor.block`, async data => {
-
-    console.log(data)
     try {
       let payload = JSON.parse(data.content.toString());
       let accounts = await accountModel.find({
@@ -53,38 +51,65 @@ let init = async () => {
       });
 
       for (let account of accounts) {
-        let utxo = await fetchUTXOService(account.address);
+        let balances = await fetchBalanceService(account.address);
 
-        let height = _.chain(utxo)
-          .sortBy('height')
-          .last()
-          .value();
+        account.lastTxs = _.filter(account.lastTxs, item => {
+          let heightDiff = payload.block - item.block;
+          return heightDiff === 0 || heightDiff === 3 || heightDiff === 6;
+        });
 
-       // if (data.height - height !== 3 && data.height - height !== 6)
-       //   return;
+        for (let i = 0; i < account.lastTxs.length; i++) {
+          let txHash = account.lastTxs[i];
+          let tx = await fetchTXService(txHash);
 
-        console.log(height);
-        console.log(data.height);
+          for (let i = 0; i < tx.inputs.length; i++) {
+            let txOut = await fetchTXService(tx.inputs[i].prevout.hash);
+            tx.inputs[i] = txOut.outputs[tx.inputs[i].prevout.index];
+          }
 
-        /*        await accountModel.update({address: account.address}, {
-         $set: _.transform({
-         'balances.confirmations0': _.get(balances, 'balances.confirmations0'),
-         'balances.confirmations3': _.get(balances, 'balances.confirmations3'),
-         'balances.confirmations6': _.get(balances, 'balances.confirmations6')
-         }, (result, val, key) => {
-         if (val) {
-         result[key] = val;
-         }
-         }, {lastBlockCheck: balances.lastBlockCheck})
-         });
-         channel.publish('events', `${config.rabbit.serviceName}_balance.${account.address}`, new Buffer(JSON.stringify({balances: balances.balances})));*/
+          tx.valueIn = _.chain(tx.inputs)
+            .map(i => i.value)
+            .sum()
+            .value();
+
+          tx.valueOut = _.chain(tx.outputs)
+            .map(i => i.value)
+            .sum()
+            .value();
+
+          tx.fee = tx.valueIn - tx.valueOut;
+
+          console.log({
+            address: account.address,
+            balances: balances.balances,
+            tx: tx
+          });
+
+          channel.publish('events', `${config.rabbit.serviceName}_balance.${payload.address}`, new Buffer(JSON.stringify({
+            address: payload.address,
+            balances: balances.balances,
+            tx: tx
+          })));
+
+        }
+
+        await accountModel.update({address: account.address, lastBlockCheck: {$lt: payload.block}}, {
+            $set: {
+              'balances.confirmations0': balances.balances.confirmations0,
+              'balances.confirmations3': balances.balances.confirmations3,
+              'balances.confirmations6': balances.balances.confirmations6,
+              lastBlockCheck: payload.block,
+              lastTxs: _.filter(account.lastTxs, item => payload.block - item.block <= 6)
+            }
+          }
+        );
       }
 
     } catch (e) {
       log.error(e);
     }
 
-   // channel.ack(data);
+    // channel.ack(data);
   });
 
   channel.consume(`app_${config.rabbit.serviceName}.balance_processor.tx`, async (data) => {
@@ -92,15 +117,17 @@ let init = async () => {
       let payload = JSON.parse(data.content.toString());
       let balances = await fetchBalanceService(payload.address);
       await accountModel.update({address: payload.address, lastBlockCheck: {$lt: balances.lastBlockCheck}}, {
-          $set: _.transform({
-            'balances.confirmations0': _.get(balances, 'balances.confirmations0'),
-            'balances.confirmations3': _.get(balances, 'balances.confirmations3'),
-            'balances.confirmations6': _.get(balances, 'balances.confirmations6')
-          }, (result, val, key) => {
-            if (val) {
-              result[key] = val;
+          $set: {
+            'balances.confirmations0': balances.balances.confirmations0,
+            'balances.confirmations3': balances.balances.confirmations3,
+            'balances.confirmations6': balances.balances.confirmations6,
+            lastBlockCheck: balances.lastBlockCheck,
+          },
+          $push: {
+            lastTxs: {
+              $each: payload.txs.map(tx => ({txid: tx, blockHeight: payload.block}))
             }
-          }, {lastBlockCheck: balances.lastBlockCheck})
+          }
         }
       );
 
