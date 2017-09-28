@@ -25,7 +25,7 @@ module.exports = utxos => {
       .defaultTo(0)
       .value(),
     confirmations3: _.chain(utxos)
-      .filter(coin => coin.confirmations >= 3 && coin.confirmations < 6)
+      .filter(coin => coin.confirmations >= 3)
       .map(coin => coin.satoshis)
       .sum()
       .defaultTo(0)

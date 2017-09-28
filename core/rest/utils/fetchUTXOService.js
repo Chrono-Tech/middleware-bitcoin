@@ -2,7 +2,8 @@ const Promise = require('bluebird'),
   ipc = require('node-ipc'),
   Coin = require('bcoin/lib/primitives/coin'),
   Network = require('bcoin/lib/protocol/network'),
-  config = require('../../../config');
+  config = require('../../../config'),
+  _ = require('lodash');
 
 /**
  * @service
@@ -30,7 +31,6 @@ module.exports = async address => {
     silent: true,
     unlink: false
   });
-
 
   let network = Network.get(config.bitcoin.network);
 
@@ -60,16 +60,19 @@ module.exports = async address => {
 
   ipcInstance.disconnect(config.bitcoin.ipcName);
 
-  return rawCoins.map(rawCoin => {
-    let coin = Coin.fromJSON(rawCoin).getJSON(network);
-    return ({
-      address: coin.address,
-      txid: coin.hash,
-      scriptPubKey: coin.script,
-      amount: coin.value / 100000000,
-      satoshis: coin.value,
-      height: coin.height,
-      confirmations: height - coin.height
-    });
-  });
+  return _.chain(rawCoins)
+    .filter(c => c.height > -1)
+    .map(rawCoin => {
+      let coin = Coin.fromJSON(rawCoin).getJSON(network);
+      return ({
+        address: coin.address,
+        txid: coin.hash,
+        scriptPubKey: coin.script,
+        amount: coin.value / 100000000,
+        satoshis: coin.value,
+        height: coin.height,
+        confirmations: height - coin.height
+      });
+    })
+    .value();
 };

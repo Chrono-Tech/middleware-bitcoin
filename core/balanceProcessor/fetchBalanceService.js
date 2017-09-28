@@ -13,7 +13,6 @@ const Promise = require('bluebird'),
 
 module.exports = async address => {
 
-
   const ipcInstance = new ipc.IPC;
 
   Object.assign(ipcInstance.config, {
@@ -25,56 +24,50 @@ module.exports = async address => {
     unlink: false
   });
 
-
   await new Promise(res => {
     ipcInstance.connectTo(config.bitcoin.ipcName, () => {
       ipcInstance.of[config.bitcoin.ipcName].on('connect', res);
     });
   });
 
-  let coins = await new Promise((res, rej) => {
+  let rawCoins = await new Promise((res, rej) => {
     ipcInstance.of[config.bitcoin.ipcName].on('message', data => data.error ? rej(data.error) : res(data.result));
     ipcInstance.of[config.bitcoin.ipcName].emit('message', JSON.stringify({
-      method: 'getcoinsbyaddress',
-      params: [address]
-    })
+        method: 'getcoinsbyaddress',
+        params: [address]
+      })
     );
   });
 
   let height = await new Promise((res, rej) => {
     ipcInstance.of[config.bitcoin.ipcName].on('message', data => data.error ? rej(data.error) : res(data.result));
     ipcInstance.of[config.bitcoin.ipcName].emit('message', JSON.stringify({
-      method: 'getblockcount',
-      params: []
-    })
+        method: 'getblockcount',
+        params: []
+      })
     );
   });
 
-  let coinHeight = _.chain(coins)
-    .sortBy('height')
-    .last()
-    .get('height')
-    .value();
-
-  let sum = _.chain(coins)
-    .map(coin => coin.value)
-    .sum()
-    .defaultTo(0)
-    .value();
-
-  let balances = {};
-
-  if (height - coinHeight >= 6) {
-    _.merge(balances, {confirmations0: sum, confirmations3: sum, confirmations6: sum});
-  }
-
-  if (3 <= height - coinHeight && height - coinHeight  < 6) {
-    _.merge(balances, {confirmations0: sum, confirmations3: sum});
-  }
-
-  if (height - coinHeight < 3) {
-    _.merge(balances, {confirmations0: sum});
-  }
+  let balances = {
+    confirmations0: _.chain(rawCoins)
+      .filter(c => c.height > -1)
+      .map(coin => coin.value)
+      .sum()
+      .defaultTo(0)
+      .value(),
+    confirmations3: _.chain(rawCoins)
+      .filter(c => c.height > -1 && height - c.height >= 3)
+      .map(coin => coin.value)
+      .sum()
+      .defaultTo(0)
+      .value(),
+    confirmations6: _.chain(rawCoins)
+      .filter(c => c.height > -1 && height - c.height >= 6)
+      .map(coin => coin.value)
+      .sum()
+      .defaultTo(0)
+      .value()
+  };
 
   ipcInstance.disconnect(config.bitcoin.ipcName);
 
