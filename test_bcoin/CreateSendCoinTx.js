@@ -1,7 +1,6 @@
 const ipc = require('node-ipc'),
   _ = require('lodash'),
   bitcoin = require('bitcoinjs-lib'),
-  bcoin = require('bcoin'),
   config = require('../config');
 
 Object.assign(ipc.config, {
@@ -23,6 +22,7 @@ module.exports = async (from, to, amount, key) => {
 
     });
   });
+
 
   let coins = await new Promise((res, rej) => {
     ipc.of.bitcoin.on('message', data => data.error ? rej() : res(data.result));

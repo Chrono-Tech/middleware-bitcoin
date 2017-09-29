@@ -45,7 +45,7 @@ module.exports = async block => {
             .includes(account.address)
             .value();
         })
-        .map(tx => tx.hash('hex'))
+        .map(tx => tx.toJSON().hash)
         .value()
     })
     )
