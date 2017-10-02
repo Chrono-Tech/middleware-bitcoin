@@ -29,14 +29,16 @@ module.exports = async address => {
     retry: 1500,
     sync: true,
     silent: true,
-    unlink: false
+    unlink: false,
+    maxRetries: 3
   });
 
   let network = Network.get(config.bitcoin.network);
 
-  await new Promise(res => {
+  await new Promise((res, rej) => {
     ipcInstance.connectTo(config.bitcoin.ipcName, () => {
       ipcInstance.of[config.bitcoin.ipcName].on('connect', res);
+      ipcInstance.of[config.bitcoin.ipcName].on('error', rej);
     });
   });
 

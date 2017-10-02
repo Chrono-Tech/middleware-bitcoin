@@ -32,7 +32,7 @@ module.exports = {
       script: 'core/rest',
       env: {
         MONGO_URI: 'mongodb://localhost:27017/data',
-        REST_PORT: 8082,
+        REST_PORT: 8081,
         BITCOIN_IPC: 'bitcoin',
         BITCOIN_IPC_PATH: '/tmp/'
       }
