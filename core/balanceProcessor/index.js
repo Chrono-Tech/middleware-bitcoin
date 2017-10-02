@@ -45,21 +45,20 @@ let init = async () => {
     try {
       let payload = JSON.parse(data.content.toString());
       let accounts = await accountModel.find({
-        $where: 'obj.balances && !(obj.balances.confirmations0 === obj.balances.confirmations3 && ' +
-        'obj.balances.confirmations3 ===  obj.balances.confirmations6)',
+        $where: 'obj.lastTxs.length > 0',
         lastBlockCheck: {$lt: payload.block}
       });
 
       for (let account of accounts) {
         let balances = await fetchBalanceService(account.address);
 
-        account.lastTxs = _.filter(account.lastTxs, item => {
-          let heightDiff = payload.block - item.block;
-          return heightDiff === 0 || heightDiff === 3 || heightDiff === 6;
+        let filteredLastTxs = _.filter(account.lastTxs, item => {
+          let heightDiff = payload.block - item.blockHeight;
+          return heightDiff === 3 || heightDiff === 6;
         });
 
-        for (let i = 0; i < account.lastTxs.length; i++) {
-          let txHash = account.lastTxs[i];
+        for (let i = 0; i < filteredLastTxs.length; i++) {
+          let txHash = filteredLastTxs[i].txid;
           let tx = await fetchTXService(txHash);
 
           for (let i = 0; i < tx.inputs.length; i++) {
@@ -79,12 +78,6 @@ let init = async () => {
 
           tx.fee = tx.valueIn - tx.valueOut;
 
-          console.log({
-            address: account.address,
-            balances: balances.balances,
-            tx: tx
-          });
-
           channel.publish('events', `${config.rabbit.serviceName}_balance.${payload.address}`, new Buffer(JSON.stringify({
             address: payload.address,
             balances: balances.balances,
@@ -99,7 +92,7 @@ let init = async () => {
               'balances.confirmations3': balances.balances.confirmations3,
               'balances.confirmations6': balances.balances.confirmations6,
               lastBlockCheck: payload.block,
-              lastTxs: _.filter(account.lastTxs, item => payload.block - item.block <= 6)
+              lastTxs: _.filter(account.lastTxs, item => payload.block - item.blockHeight <= 6)
             }
           }
         );
@@ -109,7 +102,7 @@ let init = async () => {
       log.error(e);
     }
 
-    // channel.ack(data);
+    channel.ack(data);
   });
 
   channel.consume(`app_${config.rabbit.serviceName}.balance_processor.tx`, async (data) => {

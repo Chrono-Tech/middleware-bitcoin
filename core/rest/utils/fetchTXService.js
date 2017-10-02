@@ -2,8 +2,7 @@ const Promise = require('bluebird'),
   ipc = require('node-ipc'),
   Tx = require('bcoin/lib/primitives/tx'),
   Network = require('bcoin/lib/protocol/network'),
-  config = require('../../config'),
-  _ = require('lodash');
+  config = require('../../../config');
 
 /**
  * @service
