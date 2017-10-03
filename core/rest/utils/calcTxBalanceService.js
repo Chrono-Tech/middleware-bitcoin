@@ -32,15 +32,11 @@ module.exports = async tx => {
         .sum()
         .value();
 
-      console.log(inValue);
-
       let outValue = _.chain(tx.outputs)
         .filter({address: address})
         .map(out => _.get(out, 'value', 0))
         .sum()
         .value();
-
-      console.log(outValue)
 
       return {
         address: address,

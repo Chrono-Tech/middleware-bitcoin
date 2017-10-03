@@ -1,8 +1,8 @@
 const Promise = require('bluebird'),
   ipc = require('node-ipc'),
-  Coin = require('bcoin/lib/primitives/coin'),
+  Tx = require('bcoin/lib/primitives/tx'),
   Network = require('bcoin/lib/protocol/network'),
-  config = require('../../../config'),
+  config = require('../../config'),
   _ = require('lodash');
 
 /**
@@ -19,7 +19,7 @@ const Promise = require('bluebird'),
  */
 
 
-module.exports = async address => {
+module.exports = async hash => {
 
   const ipcInstance = new ipc.IPC;
 
@@ -33,8 +33,6 @@ module.exports = async address => {
     maxRetries: 3
   });
 
-  let network = Network.get(config.bitcoin.network);
-
   await new Promise((res, rej) => {
     ipcInstance.connectTo(config.bitcoin.ipcName, () => {
       ipcInstance.of[config.bitcoin.ipcName].on('connect', res);
@@ -42,41 +40,18 @@ module.exports = async address => {
     });
   });
 
-
-
-  let rawCoins = await new Promise((res, rej) => {
+  let rawTx = await new Promise((res, rej) => {
     ipcInstance.of[config.bitcoin.ipcName].on('message', data => data.error ? rej(data.error) : res(data.result));
     ipcInstance.of[config.bitcoin.ipcName].emit('message', JSON.stringify({
-        method: 'getcoinsbyaddress',
-        params: [address]
+        method: 'getrawtransaction',
+        params: [hash]
       })
     );
   });
 
-  let height = await new Promise((res, rej) => {
-    ipcInstance.of[config.bitcoin.ipcName].on('message', data => data.error ? rej(data.error) : res(data.result));
-    ipcInstance.of[config.bitcoin.ipcName].emit('message', JSON.stringify({
-        method: 'getblockcount',
-        params: []
-      })
-    );
-  });
+  let network = Network.get(config.bitcoin.network);
 
   ipcInstance.disconnect(config.bitcoin.ipcName);
 
-  return _.chain(rawCoins)
-    .filter(c => c.height > -1)
-    .map(rawCoin => {
-      let coin = Coin.fromJSON(rawCoin).getJSON(network);
-      return ({
-        address: coin.address,
-        txid: coin.hash,
-        scriptPubKey: coin.script,
-        amount: coin.value / 100000000,
-        satoshis: coin.value,
-        height: coin.height,
-        confirmations: height - coin.height
-      });
-    })
-    .value();
+  return Tx.fromRaw(rawTx, 'hex').getJSON(network);
 };

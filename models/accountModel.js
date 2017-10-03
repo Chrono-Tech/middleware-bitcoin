@@ -17,6 +17,7 @@ const Account = new mongoose.Schema({
     confirmations6: {type: Number, default: 0, required: true}
   },
   lastBlockCheck: {type: Number, default: 0, required: true},
+  lastTxs: {type: mongoose.Schema.Types.Mixed, default: [], required: true},
   created: {type: Date, required: true, default: Date.now}
 });
 

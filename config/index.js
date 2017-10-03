@@ -33,11 +33,12 @@ module.exports = {
     port: parseInt(process.env.REST_PORT) || 8081
   },
   rabbit: {
-    url: process.env.RABBIT_URI || 'amqp://localhost:5672'
+    url: process.env.RABBIT_URI || 'amqp://localhost:5672',
+    serviceName: process.env.RABBIT_SERVICE_NAME || 'app_bitcoin'
   },
   bitcoin: {
     dbpath: process.env.BITCOIN_DB_PATH || '',
-    network: process.env.BITCOIN_NETWORK || 'main',
+    network: process.env.BITCOIN_NETWORK || 'regtest',
     db: process.env.BITCOIN_DB || 'memory',
     ipcName: process.env.BITCOIN_IPC || 'bitcoin',
     ipcPath: process.env.BITCOIN_IPC_PATH || '/tmp/',

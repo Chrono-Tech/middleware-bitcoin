@@ -2,7 +2,7 @@ const Promise = require('bluebird'),
   ipc = require('node-ipc'),
   Coin = require('bcoin/lib/primitives/coin'),
   Network = require('bcoin/lib/protocol/network'),
-  config = require('../../../config'),
+  config = require('../../config'),
   _ = require('lodash');
 
 /**
@@ -41,8 +41,6 @@ module.exports = async address => {
       ipcInstance.of[config.bitcoin.ipcName].on('error', rej);
     });
   });
-
-
 
   let rawCoins = await new Promise((res, rej) => {
     ipcInstance.of[config.bitcoin.ipcName].on('message', data => data.error ? rej(data.error) : res(data.result));

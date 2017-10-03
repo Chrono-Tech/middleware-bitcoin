@@ -14,7 +14,7 @@ Object.assign(ipc.config, {
 
 const init = async () => {
 
-  await new Promise(res => {
+/*  await new Promise(res => {
     ipc.connectTo('bitcoin_reg', () => {
       ipc.of.bitcoin.on('connect', res);
 
@@ -23,7 +23,7 @@ const init = async () => {
       });
 
     });
-  });
+  });*/
 
   let wiff = 'cRybMaH8rpHbWW47q3KZNpF5gSiANvzZf99pgvQnemvM6hoF5xBe';
   let wiff2 = 'cR9txJW5BP9XX9R3hDsfyhaJ95jQ6zPVMwfSYmTZknR2W2Hp5eFR';
