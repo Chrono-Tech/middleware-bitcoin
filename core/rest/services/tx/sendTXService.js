@@ -16,7 +16,7 @@ module.exports = async (req, res) => {
   let tx = decodeTxService(req.body.tx);
 
   let addresses = _.chain([])
-    .merge(tx.outputs, tx.inputs)
+    .union(tx.outputs, tx.inputs)
     .map(item => item.address)
     .uniq()
     .value();
