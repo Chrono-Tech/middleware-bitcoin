@@ -25,10 +25,10 @@ describe('tests', function () {
 
     ctx.network = Network.get('regtest');
 
-    let keyPair = bcoin.hd.generate();
-    let keyPair2 = bcoin.hd.generate();
-    let keyPair3 = bcoin.hd.generate();
-    let keyPair4 = bcoin.hd.generate();
+    let keyPair = bcoin.hd.generate(ctx.network);
+    let keyPair2 = bcoin.hd.generate(ctx.network);
+    let keyPair3 = bcoin.hd.generate(ctx.network);
+    let keyPair4 = bcoin.hd.generate(ctx.network);
 
     ctx.accounts.push(keyPair, keyPair2, keyPair3, keyPair4);
 

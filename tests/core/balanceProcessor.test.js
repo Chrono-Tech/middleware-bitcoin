@@ -41,12 +41,10 @@ module.exports = (ctx) => {
     return await ipcExec('generatetoaddress', [10, keyring.getAddress().toString()])
   });
 
-
   it('generate some coins for accountB', async () => {
     let keyring = new bcoin.keyring(ctx.accounts[1].privateKey, ctx.network);
     return await ipcExec('generatetoaddress', [100, keyring.getAddress().toString()])
   });
-
 
   it('validate balance for account in mongodb', async () => {
     await Promise.delay(10000);
@@ -98,14 +96,11 @@ module.exports = (ctx) => {
     return await ipcExec('generatetoaddress', [10, keyring.getAddress().toString()])
   });
 
-
   it('validate balance for all accounts in mongodb', async () => {
     await Promise.delay(10000);
     let keyring = new bcoin.keyring(ctx.accounts[0].privateKey, ctx.network);
     let account = await accountModel.findOne({address: keyring.getAddress().toString()});
     expect(account.balances.confirmations0).to.be.lt(scope.amountA);
   });
-
-
 
 };

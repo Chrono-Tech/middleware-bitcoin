@@ -28,6 +28,17 @@ module.exports = (ctx) => {
     })
   });
 
+  it('generate some coins for accountA', async () => {
+    let keyring = new bcoin.keyring(ctx.accounts[0].privateKey, ctx.network);
+    return await ipcExec('generatetoaddress', [50, keyring.getAddress().toString()])
+  });
+
+  it('unlock coins for account A by generating some coins for accountD', async () => {
+    let keyring = new bcoin.keyring(ctx.accounts[3].privateKey, ctx.network);
+    return await ipcExec('generatetoaddress', [100, keyring.getAddress().toString()])
+  });
+
+
   it('register addresses', async () => {
 
     let responses = await Promise.all(ctx.accounts.map(account => {
@@ -47,16 +58,6 @@ module.exports = (ctx) => {
     )
   });
 
-  it('generate some coins for accountA', async () => {
-    let keyring = new bcoin.keyring(ctx.accounts[0].privateKey, ctx.network);
-    return await ipcExec('generatetoaddress', [50, keyring.getAddress().toString()])
-  });
-
-  it('unlock coins for account A by generating some coins for accountD', async () => {
-    let keyring = new bcoin.keyring(ctx.accounts[3].privateKey, ctx.network);
-    return await ipcExec('generatetoaddress', [100, keyring.getAddress().toString()])
-  });
-
   it('send coins to accountB and accountC', async () => {
 
     let keyring = new bcoin.keyring(ctx.accounts[0].privateKey, ctx.network);
@@ -74,7 +75,6 @@ module.exports = (ctx) => {
         result.amount += coin.value;
       }, {amount: 0, coins: []})
       .value();
-
 
     const mtx = new bcoin.mtx();
 
@@ -105,7 +105,8 @@ module.exports = (ctx) => {
       }
     });
 
-    expect(response.body).to.be.a('string');
+    expect(response.body).to.include.any.keys('hash', 'fee');
+
   });
 
   it('validate potential balance changes for accounts', async () => {
@@ -127,28 +128,6 @@ module.exports = (ctx) => {
 
     expect(diffB + diffC + scope.mtx.getFee()).to.equal(diffA);
 
-  });
-
-
-  it('generate some coins for accountD', async () => {
-    await Promise.delay(15000);
-    let keyring = new bcoin.keyring(ctx.accounts[3].privateKey, ctx.network);
-    return await ipcExec('generatetoaddress', [10, keyring.getAddress().toString()])
-  });
-
-  it('validate balances for accounts in mongodb', async () => {
-    await Promise.delay(10000);
-    let keyring1 = new bcoin.keyring(ctx.accounts[0].privateKey, ctx.network);
-    let keyring2 = new bcoin.keyring(ctx.accounts[1].privateKey, ctx.network);
-    let keyring3 = new bcoin.keyring(ctx.accounts[2].privateKey, ctx.network);
-
-    let accountA = await accountModel.findOne({address: keyring1.getAddress().toString()});
-    let accountB = await accountModel.findOne({address: keyring2.getAddress().toString()});
-    let accountC = await accountModel.findOne({address: keyring3.getAddress().toString()});
-
-    expect(accountA.balances.confirmations6).to.equal(scope.balanceA0);
-    expect(accountB.balances.confirmations6).to.equal(scope.balanceB0);
-    expect(accountC.balances.confirmations6).to.equal(scope.balanceC0);
   });
 
 };

@@ -1,6 +1,8 @@
 const config = require('../../config'),
   mongoose = require('mongoose'),
   fetchBalanceService = require('./fetchBalanceService'),
+  fetchUTXOService = require('./fetchUTXOService'),
+  fetchTXService = require('./fetchTXService'),
   accountModel = require('../../models/accountModel'),
   bunyan = require('bunyan'),
   _ = require('lodash'),
@@ -22,16 +24,16 @@ let init = async () => {
 
   try {
     await channel.assertExchange('events', 'topic', {durable: false});
-    await channel.assertQueue('app_bitcoin.balance_processor.tx');
-    await channel.bindQueue('app_bitcoin.balance_processor.tx', 'events', 'bitcoin_transaction.*');
+    await channel.assertQueue(`app_${config.rabbit.serviceName}.balance_processor.tx`);
+    await channel.bindQueue(`app_${config.rabbit.serviceName}.balance_processor.tx`, 'events', `${config.rabbit.serviceName}_transaction.*`);
   } catch (e) {
     log.error(e);
     channel = await conn.createChannel();
   }
 
   try {
-    await channel.assertQueue('app_bitcoin.balance_processor.block');
-    await channel.bindQueue('app_bitcoin.balance_processor.block', 'events', 'bitcoin_block');
+    await channel.assertQueue(`app_${config.rabbit.serviceName}.balance_processor.block`);
+    await channel.bindQueue(`app_${config.rabbit.serviceName}.balance_processor.block`, 'events', `${config.rabbit.serviceName}_block`);
   } catch (e) {
     log.error(e);
     channel = await conn.createChannel();
@@ -39,29 +41,61 @@ let init = async () => {
 
   channel.prefetch(2);
 
-  channel.consume('app_bitcoin.balance_processor.block', async data => {
+  channel.consume(`app_${config.rabbit.serviceName}.balance_processor.block`, async data => {
     try {
       let payload = JSON.parse(data.content.toString());
       let accounts = await accountModel.find({
-        $where: 'obj.balances && !(obj.balances.confirmations0 === obj.balances.confirmations3 && ' +
-        'obj.balances.confirmations3 ===  obj.balances.confirmations6)',
+        $where: 'obj.lastTxs.length > 0',
         lastBlockCheck: {$lt: payload.block}
       });
 
       for (let account of accounts) {
         let balances = await fetchBalanceService(account.address);
-        await accountModel.update({address: account.address}, {
-          $set: _.transform({
-            'balances.confirmations0': _.get(balances, 'balances.confirmations0'),
-            'balances.confirmations3': _.get(balances, 'balances.confirmations3'),
-            'balances.confirmations6': _.get(balances, 'balances.confirmations6')
-          }, (result, val, key) => {
-            if (val) {
-              result[key] = val;
-            }
-          }, {lastBlockCheck: balances.lastBlockCheck})
+
+        let filteredLastTxs = _.filter(account.lastTxs, item => {
+          let heightDiff = payload.block - item.blockHeight;
+          return heightDiff === 3 || heightDiff === 6;
         });
-        channel.publish('events', `bitcoin_balance.${account.address}`, new Buffer(JSON.stringify({balances: balances.balances})));
+
+        for (let i = 0; i < filteredLastTxs.length; i++) {
+          let txHash = filteredLastTxs[i].txid;
+          let tx = await fetchTXService(txHash);
+
+          for (let i = 0; i < tx.inputs.length; i++) {
+            let txOut = await fetchTXService(tx.inputs[i].prevout.hash);
+            tx.inputs[i] = txOut.outputs[tx.inputs[i].prevout.index];
+          }
+
+          tx.valueIn = _.chain(tx.inputs)
+            .map(i => i.value)
+            .sum()
+            .value();
+
+          tx.valueOut = _.chain(tx.outputs)
+            .map(i => i.value)
+            .sum()
+            .value();
+
+          tx.fee = tx.valueIn - tx.valueOut;
+
+          channel.publish('events', `${config.rabbit.serviceName}_balance.${payload.address}`, new Buffer(JSON.stringify({
+            address: payload.address,
+            balances: balances.balances,
+            tx: tx
+          })));
+
+        }
+
+        await accountModel.update({address: account.address, lastBlockCheck: {$lt: payload.block}}, {
+            $set: {
+              'balances.confirmations0': balances.balances.confirmations0,
+              'balances.confirmations3': balances.balances.confirmations3,
+              'balances.confirmations6': balances.balances.confirmations6,
+              lastBlockCheck: payload.block,
+              lastTxs: _.filter(account.lastTxs, item => payload.block - item.blockHeight <= 6)
+            }
+          }
+        );
       }
 
     } catch (e) {
@@ -71,28 +105,68 @@ let init = async () => {
     channel.ack(data);
   });
 
-  channel.consume('app_bitcoin.balance_processor.tx', async (data) => {
+  channel.consume(`app_${config.rabbit.serviceName}.balance_processor.tx`, async (data) => {
     try {
       let payload = JSON.parse(data.content.toString());
       let balances = await fetchBalanceService(payload.address);
       await accountModel.update({address: payload.address, lastBlockCheck: {$lt: balances.lastBlockCheck}}, {
-          $set: _.transform({
-            'balances.confirmations0': _.get(balances, 'balances.confirmations0'),
-            'balances.confirmations3': _.get(balances, 'balances.confirmations3'),
-            'balances.confirmations6': _.get(balances, 'balances.confirmations6')
-          }, (result, val, key) => {
-            if (val) {
-              result[key] = val;
+          $set: {
+            'balances.confirmations0': balances.balances.confirmations0,
+            'balances.confirmations3': balances.balances.confirmations3,
+            'balances.confirmations6': balances.balances.confirmations6,
+            lastBlockCheck: balances.lastBlockCheck,
+          },
+          $push: {
+            lastTxs: {
+              $each: payload.txs.map(tx => ({txid: tx, blockHeight: payload.block}))
             }
-          }, {lastBlockCheck: balances.lastBlockCheck})
+          }
         }
       );
-      channel.publish('events', `bitcoin_balance.${payload.address}`, new Buffer(JSON.stringify({balances: balances.balances})));
+
+      for (let txHash of payload.txs) {
+        let tx = await fetchTXService(txHash);
+
+        if (_.find(tx.inputs, {prevout: {hash: '0000000000000000000000000000000000000000000000000000000000000000'}})) {
+          tx.inputs = [{
+            value: _.chain(tx.outputs)
+              .map(i => i.value)
+              .sum()
+              .value(),
+            script: tx.inputs[0],
+            address: null
+          }];
+        } else {
+          for (let i = 0; i < tx.inputs.length; i++) {
+            let txOut = await fetchTXService(tx.inputs[i].prevout.hash);
+            tx.inputs[i] = txOut.outputs[tx.inputs[i].prevout.index];
+          }
+        }
+
+        tx.valueIn = _.chain(tx.inputs)
+          .map(i => i.value)
+          .sum()
+          .value();
+
+        tx.valueOut = _.chain(tx.outputs)
+          .map(i => i.value)
+          .sum()
+          .value();
+
+        tx.fee = tx.valueIn - tx.valueOut;
+
+        channel.publish('events', `${config.rabbit.serviceName}_balance.${payload.address}`, new Buffer(JSON.stringify({
+          address: payload.address,
+          balances: balances.balances,
+          tx: tx
+        })));
+
+      }
+
       log.info(`balance updated for ${payload.address}`);
     } catch (e) {
       log.error(e);
     }
-
     channel.ack(data);
   });
 
