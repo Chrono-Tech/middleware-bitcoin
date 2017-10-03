@@ -127,9 +127,20 @@ let init = async () => {
       for (let txHash of payload.txs) {
         let tx = await fetchTXService(txHash);
 
-        for (let i = 0; i < tx.inputs.length; i++) {
-          let txOut = await fetchTXService(tx.inputs[i].prevout.hash);
-          tx.inputs[i] = txOut.outputs[tx.inputs[i].prevout.index];
+        if (_.find(tx.inputs, {prevout: {hash: '0000000000000000000000000000000000000000000000000000000000000000'}})) {
+          tx.inputs = [{
+            value: _.chain(tx.outputs)
+              .map(i => i.value)
+              .sum()
+              .value(),
+            script: tx.inputs[0],
+            address: null
+          }];
+        } else {
+          for (let i = 0; i < tx.inputs.length; i++) {
+            let txOut = await fetchTXService(tx.inputs[i].prevout.hash);
+            tx.inputs[i] = txOut.outputs[tx.inputs[i].prevout.index];
+          }
         }
 
         tx.valueIn = _.chain(tx.inputs)

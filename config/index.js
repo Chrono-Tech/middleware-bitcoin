@@ -38,7 +38,7 @@ module.exports = {
   },
   bitcoin: {
     dbpath: process.env.BITCOIN_DB_PATH || '',
-    network: process.env.BITCOIN_NETWORK || 'main',
+    network: process.env.BITCOIN_NETWORK || 'regtest',
     db: process.env.BITCOIN_DB || 'memory',
     ipcName: process.env.BITCOIN_IPC || 'bitcoin',
     ipcPath: process.env.BITCOIN_IPC_PATH || '/tmp/',
