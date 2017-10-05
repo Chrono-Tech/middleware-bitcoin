@@ -1,25 +1,56 @@
-# Middleware-bitcoin
+# Middleware-bitcoin [![Build Status](https://travis-ci.org/ChronoBank/middleware-bitcoin.svg?branch=master)](https://travis-ci.org/ChronoBank/middleware-bitcoin)
 
-Middleware services for chronobank (bitcoin version)
+Bitcoin Middleware service installer
 
-Features:
-  - Keep transactions of registered users
-  - microservice based architecture
+###Installation
 
-### Installation
-
-1) Clone the repo
-2) run:
+After cloning repo, do:
 ```
-npm install -g pm2
 npm install
 ```
-2) if you need REST service, then run:
+
+then just run installer with:
 ```
-cd core/rest && npm install
+node .
+```
+
+You should see available modules to install in cli. Check modules you want to install to - and the rest of the work installer will handle.
+
+#### Installation without CLI
+
+If you don't have a chance to run cli - then you can just pass modules, you will to install as args:
+
+```
+node . middleware-middleware-blockprocessor middleware-bitcoin-rest
+```
+
+### Modules
+The middleware consists of 3 core modules.
+
+##### Block processor
+This module is served as a full bitcoin node. The iteraction with node happens via IPC interface. In order to install this module, you should сheck 'middleware-bitcoin-blockprocessor' in cli menu during installation.
+
+##### Balance processor
+This module is used for updating balances for registered accounts (see a description of accounts in block processor serction).
+
+In order to install it, check this option in cli:
+```
+middleware-bitcoin-balance-processor
+```
+
+##### Rest
+Rest module is used for exposing REST API over block processor. It includes methods for fetching accounts, utxo and pushing new txs.
+
+In order to install it, check this option in cli:
+```
+middleware-bitcoin-rest
 ```
 
 ### Configure
+There are 2 possible scenarious of running the middleware modules:
+
+##### via .env
+
 To apply your configuration, create a .env file in root folder of repo (in case it's not present already).
 Below is the expamle configuration:
 
@@ -31,6 +62,7 @@ BITCOIN_NETWORK=regtest
 BITCOIN_DB=leveldb
 BITCOIN_DB_PATH=./db
 BITCOIN_IPC=bitcoin
+BITCOIN_IPC_PATH=/tmp/
 BITCOIN_ETHERBASE=RXjwE6pvdFoR9m81KZKZVotZpn4j1SLrvH
 ```
 
@@ -41,45 +73,73 @@ The options are presented below:
 | MONGO_URI   | the URI string for mongo connection
 | REST_PORT   | rest plugin port
 | RABBIT_URI   | rabbitmq URI connection string
-| BITCOIN_NETWORK   | bitcoin's network - main, testnet or regtest
-| BITCOIN_DB   | bitcoin's database - memory or leveldb
-| BITCOIN_DB_PATH   | bitcoin's db path (could be ommited, in case you use memory as db)
-| BITCOIN_IPC   | bitcoin's ipc interface name
+| BITCOIN_NETWORK   | network name (alias)- is used for connecting via ipc (regtest, main, testnet, bcc)
+| BITCOIN_DB   | bitcoin database driver (leveldb or memory)
+| BITCOIN_DB_PATH   | path where to store db (with memory db you can skip this option)
+| BITCOIN_IPC   | ipc file name
+| BITCOIN_IPC_PATH   | directory, where to store ipc file (you can skip this option on windows)
+| BITCOIN_ETHERBASE | etherbase address (optional param)
 
 
-### Run
-Just cd to root project's dir and type:
+
+
+In this case, you should run the processes from the root folder, like that:
+```
+node core/blockProcessor
+```
+
+##### via ecosystem.config.js
+
+If you want to run a cluster, then you need to install pm2 manager first:
+```
+npm install -g pm2
+```
+
+And edit the ecosystem.config.js according your needs:
+```
+  apps = [
+    {
+      name: 'block_processor',
+      script: 'core/middleware-bitcoin-blockprocessor',
+      env: {
+        MONGO_URI: 'mongodb://localhost:27017/data',
+        RABBIT_URI: 'amqp://localhost:5672',
+        BITCOIN_NETWORK: 'regtest',
+        BITCOIN_DB: 'memory',
+        BITCOIN_IPC: 'bitcoin',
+        BITCOIN_IPC_PATH: '/tmp/',
+        BITCOIN_ETHERBASE: 'RXjwE6pvdFoR9m81KZKZVotZpn4j1SLrvH'
+      }
+    },
+    {
+      name: 'balance_processor',
+      script: 'core/middleware-bitcoin-balance-processor',
+      env: {
+        MONGO_URI: 'mongodb://localhost:27017/data',
+        RABBIT_URI: 'amqp://localhost:5672',
+        BITCOIN_IPC: 'bitcoin',
+        BITCOIN_IPC_PATH: '/tmp/',
+      }
+    },
+    {
+      name: 'rest',
+      script: 'core/middleware-bitcoin-rest',
+      env: {
+        MONGO_URI: 'mongodb://localhost:27017/data',
+        REST_PORT: 8081,
+        BITCOIN_IPC: 'bitcoin',
+        BITCOIN_IPC_PATH: '/tmp/'
+      }
+    }
+  ];
+```
+
+Options are the same, as in .env. The only difference, is that they are specified for each app in a separate way.
+Modules, which are not installed - will be ignored in configuration
+
+After all is done, just start cluster with:
 ```
 pm2 start ecosystem.config.js
-```
-
-### REST API
-In order to retrieve the saved records from db,
-we expose them via rest api. The route system is look like so:
-
-| route | methods | params | description |
-| ------ | ------ | ------ | ------ |
-| /tx/send   | POST | TX - encoded and signed tx  | broadcast a transaction to network
-| /addr   | POST | address - bitcoin's address | register a new address, whose txs middleware will listen to
-| /addr   | DELETE | address - bitcoin's address | deregister an address
-| /{addr}/balance   | GET | | returns a balance for the specified address
-| /{addr}/utxo   | GET | | returns a UTXO for the specified address
-
-### AMQP service
-
-For the moment, amqp is used as a transport layer for delivering data, received for notifying client about new transaction for registered client, and about balance changes.
-
-In order to listen for new transactions, you should subscribe yourself to exchange 'events' and listen to topic 'bitcoin_transaction.${your_account_address}'.
-
-For balance changes - the format is the same:
-'bitcoin_balance.${your_account_address}'
-
-### Testing
-Right now, only integration tests are provided. Thus should check the core funtions only.
-
-In order to run them, type:
-```sh
-npm run test
 ```
 
 
