@@ -1,48 +1,28 @@
-require('dotenv/config');
-
-const config = require('../config'),
-  path = require('path'),
-  require_all = require('require-all'),
-  coreTests = require_all({
-    dirname: path.join(__dirname, 'core'),
-    filter: /(.+test)\.js$/,
-    map: name => name.replace('.test', '')
-  }),
-  Network = require('bcoin/lib/protocol/network'),
-  bcoin = require('bcoin'),
-  ctx= {
-  network: null,
-  accounts: []
-  },
-  mongoose = require('mongoose');
-
-mongoose.Promise = Promise;
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+const spawn = require('child_process').spawn,
+  config = require('../config'),
+  fs = require('fs'),
+  _ = require('lodash'),
+  expect = require('chai').expect,
+  path = require('path');
 
 describe('tests', function () {
 
-  before(async () => {
-
-    ctx.network = Network.get('regtest');
-
-    let keyPair = bcoin.hd.generate(ctx.network);
-    let keyPair2 = bcoin.hd.generate(ctx.network);
-    let keyPair3 = bcoin.hd.generate(ctx.network);
-    let keyPair4 = bcoin.hd.generate(ctx.network);
-
-    ctx.accounts.push(keyPair, keyPair2, keyPair3, keyPair4);
-
-    mongoose.connect(config.mongo.uri, {useMongoClient: true});
+  it('install all repos', async () => {
+    await new Promise((res, rej) =>
+      spawn('node', _.union(['.'], config.modules.map(m => m.name)), {
+        stdio: 'inherit',
+        shell: true
+      })
+        .on('error', rej)
+        .on('close', res)
+    );
   });
 
-  after(() => {
-    return mongoose.disconnect();
-  });
 
-  describe('core/blockProcessor', () => coreTests.blockProcessor(ctx));
+  it('should check, that all modules are installed', ()=>{
+    let checked = config.modules.filter(app => fs.existsSync(path.join('core', app.name)));
+    expect(checked.length).to.equal(config.modules.length);
+  })
 
-  describe('core/balanceProcessor', () => coreTests.balanceProcessor(ctx));
-
-  describe('core/rest', () => coreTests.rest(ctx));
 
 });
