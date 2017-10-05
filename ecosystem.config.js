@@ -1,12 +1,8 @@
-module.exports = {
-  /**
-   * Application configuration section
-   * http://pm2.keymetrics.io/docs/usage/application-declaration/
-   */
-  apps: [
+const fs = require('fs'),
+  apps = [
     {
       name: 'block_processor',
-      script: 'core/blockProcessor',
+      script: 'core/middleware-bitcoin-blockprocessor',
       env: {
         MONGO_URI: 'mongodb://localhost:27017/data',
         RABBIT_URI: 'amqp://localhost:5672',
@@ -19,7 +15,7 @@ module.exports = {
     },
     {
       name: 'balance_processor',
-      script: 'core/balanceProcessor',
+      script: 'core/middleware-bitcoin-balance-processor',
       env: {
         MONGO_URI: 'mongodb://localhost:27017/data',
         RABBIT_URI: 'amqp://localhost:5672',
@@ -29,7 +25,7 @@ module.exports = {
     },
     {
       name: 'rest',
-      script: 'core/rest',
+      script: 'core/middleware-bitcoin-rest',
       env: {
         MONGO_URI: 'mongodb://localhost:27017/data',
         REST_PORT: 8081,
@@ -37,5 +33,12 @@ module.exports = {
         BITCOIN_IPC_PATH: '/tmp/'
       }
     }
-  ]
+  ];
+
+module.exports = {
+  /**
+   * Application configuration section
+   * http://pm2.keymetrics.io/docs/usage/application-declaration/
+   */
+  apps: apps.filter(app => fs.existsSync(app.script))
 };
