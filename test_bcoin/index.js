@@ -36,7 +36,7 @@ const init = async () => {
     );
   });
 
-  console.log(coins);
+  //console.log(coins);
 
   console.log('summ: ', _.chain(coins).map(c => c.value).sum().value());
 
@@ -54,7 +54,7 @@ const init = async () => {
   tx.addInput(txId, 0);
 
   //console.log(amount);
-  tx.addOutput(keyPair.getAddress(), amount - 10000);
+  tx.addOutput(keyPair2.getAddress(), amount - 10000);
 
   tx.sign(0, keyPair);
 
