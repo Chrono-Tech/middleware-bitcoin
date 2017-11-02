@@ -11,6 +11,10 @@ module.exports = {
     {
       name: 'middleware-bitcoin-balance-processor',
       url: 'ChronoBank/middleware-bitcoin-balance-processor'
+    },
+    {
+      name: 'middleware-litecoin-blockprocessor',
+      url: 'ChronoBank/middleware-litecoin-blockprocessor'
     }
   ]
 };
