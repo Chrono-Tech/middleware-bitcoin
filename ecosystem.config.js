@@ -5,12 +5,12 @@ const fs = require('fs'),
       script: 'core/middleware-bitcoin-blockprocessor',
       env: {
         MONGO_URI: 'mongodb://localhost:27017/data',
+        MONGO_COLLECTION_PREFIX: 'bitcoin',
         RABBIT_URI: 'amqp://localhost:5672',
-        BITCOIN_NETWORK: 'regtest',
-        BITCOIN_DB: 'memory',
-        BITCOIN_IPC: 'bitcoin',
-        BITCOIN_IPC_PATH: '/tmp/',
-        BITCOIN_ETHERBASE: 'RXjwE6pvdFoR9m81KZKZVotZpn4j1SLrvH'
+        NETWORK: 'regtest',
+        DB_DRIVER: 'memory',
+        IPC_NAME: 'bitcoin',
+        IPC_PATH: '/tmp/'
       }
     },
     {
@@ -18,9 +18,10 @@ const fs = require('fs'),
       script: 'core/middleware-bitcoin-balance-processor',
       env: {
         MONGO_URI: 'mongodb://localhost:27017/data',
+        MONGO_COLLECTION_PREFIX: 'bitcoin',
         RABBIT_URI: 'amqp://localhost:5672',
-        BITCOIN_IPC: 'bitcoin',
-        BITCOIN_IPC_PATH: '/tmp/',
+        IPC_NAME: 'bitcoin',
+        IPC_PATH: '/tmp/',
       }
     },
     {
@@ -28,9 +29,23 @@ const fs = require('fs'),
       script: 'core/middleware-bitcoin-rest',
       env: {
         MONGO_URI: 'mongodb://localhost:27017/data',
+        MONGO_COLLECTION_PREFIX: 'bitcoin',
         REST_PORT: 8081,
-        BITCOIN_IPC: 'bitcoin',
-        BITCOIN_IPC_PATH: '/tmp/'
+        IPC_NAME: 'bitcoin',
+        IPC_PATH: '/tmp/'
+      }
+    },
+    {
+      name: 'block_processor',
+      script: 'core/middleware-litecoin-blockprocessor',
+      env: {
+        MONGO_URI: 'mongodb://localhost:27017/data',
+        MONGO_COLLECTION_PREFIX: 'litecoin',
+        RABBIT_URI: 'amqp://localhost:5672',
+        NETWORK: 'regtest',
+        DB_DRIVER: 'memory',
+        IPC_NAME: 'litecoin',
+        IPC_PATH: '/tmp/'
       }
     }
   ];

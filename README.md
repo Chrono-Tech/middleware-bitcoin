@@ -2,7 +2,7 @@
 
 Bitcoin Middleware service installer
 
-###Installation
+### Installation
 
 After cloning repo, do:
 ```
@@ -46,6 +46,9 @@ In order to install it, check this option in cli:
 middleware-bitcoin-rest
 ```
 
+##### Litecoin Block processor
+This module is served as a full litecoin node. The iteraction with node happens via IPC interface. In order to install this module, you should сheck 'middleware-litecoin-blockprocessor' in cli menu during installation. Due the equality of rpc commands with bitcoin - balance and rest services for bitcoin are completely compatible with litecoin blockprocessor.
+
 ### Configure
 There are 2 possible scenarious of running the middleware modules:
 
@@ -55,15 +58,15 @@ To apply your configuration, create a .env file in root folder of repo (in case 
 Below is the expamle configuration:
 
 ```
-MONGO_URI=mongodb://localhost:32772/data
-REST_PORT=8082
-RABBIT_URI=amqp://localhost:32769
-BITCOIN_NETWORK=regtest
-BITCOIN_DB=leveldb
-BITCOIN_DB_PATH=./db
-BITCOIN_IPC=bitcoin
-BITCOIN_IPC_PATH=/tmp/
-BITCOIN_ETHERBASE=RXjwE6pvdFoR9m81KZKZVotZpn4j1SLrvH
+MONGO_URI=mongodb://localhost:27017/data
+MONGO_COLLECTION_PREFIX=bitcoin
+REST_PORT=8081
+RABBIT_URI=amqp://localhost:5672
+NETWORK=regtest
+DB_DRIVER=leveldb
+DB_PATH=./db
+IPC_NAME=bitcoin
+IPC_PATH=/tmp/
 ```
 
 The options are presented below:
@@ -71,14 +74,14 @@ The options are presented below:
 | name | description|
 | ------ | ------ |
 | MONGO_URI   | the URI string for mongo connection
+| MONGO_COLLECTION_PREFIX   | the prefix name for all created collections, like for Account model - it will be called (in our case) bitcoinAccount
 | REST_PORT   | rest plugin port
 | RABBIT_URI   | rabbitmq URI connection string
-| BITCOIN_NETWORK   | network name (alias)- is used for connecting via ipc (regtest, main, testnet, bcc)
-| BITCOIN_DB   | bitcoin database driver (leveldb or memory)
-| BITCOIN_DB_PATH   | path where to store db (with memory db you can skip this option)
-| BITCOIN_IPC   | ipc file name
-| BITCOIN_IPC_PATH   | directory, where to store ipc file (you can skip this option on windows)
-| BITCOIN_ETHERBASE | etherbase address (optional param)
+| NETWORK   | network name (alias)- is used for connecting via ipc (regtest, main, testnet, bcc)
+| DB_DRIVER   | bitcoin database driver (leveldb or memory)
+| DB_PATH   | path where to store db (with memory db you can skip this option)
+| IPC_NAME   | ipc file name
+| IPC_PATH   | directory, where to store ipc file (you can skip this option on windows)
 
 
 
@@ -97,18 +100,18 @@ npm install -g pm2
 
 And edit the ecosystem.config.js according your needs:
 ```
-  apps = [
+apps = [
     {
       name: 'block_processor',
       script: 'core/middleware-bitcoin-blockprocessor',
       env: {
         MONGO_URI: 'mongodb://localhost:27017/data',
+        MONGO_COLLECTION_PREFIX: 'bitcoin',
         RABBIT_URI: 'amqp://localhost:5672',
-        BITCOIN_NETWORK: 'regtest',
-        BITCOIN_DB: 'memory',
-        BITCOIN_IPC: 'bitcoin',
-        BITCOIN_IPC_PATH: '/tmp/',
-        BITCOIN_ETHERBASE: 'RXjwE6pvdFoR9m81KZKZVotZpn4j1SLrvH'
+        NETWORK: 'regtest',
+        DB_DRIVER: 'memory',
+        IPC_NAME: 'bitcoin',
+        IPC_PATH: '/tmp/'
       }
     },
     {
@@ -116,9 +119,10 @@ And edit the ecosystem.config.js according your needs:
       script: 'core/middleware-bitcoin-balance-processor',
       env: {
         MONGO_URI: 'mongodb://localhost:27017/data',
+        MONGO_COLLECTION_PREFIX: 'bitcoin',
         RABBIT_URI: 'amqp://localhost:5672',
-        BITCOIN_IPC: 'bitcoin',
-        BITCOIN_IPC_PATH: '/tmp/',
+        IPC_NAME: 'bitcoin',
+        IPC_PATH: '/tmp/',
       }
     },
     {
@@ -126,9 +130,23 @@ And edit the ecosystem.config.js according your needs:
       script: 'core/middleware-bitcoin-rest',
       env: {
         MONGO_URI: 'mongodb://localhost:27017/data',
+        MONGO_COLLECTION_PREFIX: 'bitcoin',
         REST_PORT: 8081,
-        BITCOIN_IPC: 'bitcoin',
-        BITCOIN_IPC_PATH: '/tmp/'
+        IPC_NAME: 'bitcoin',
+        IPC_PATH: '/tmp/'
+      }
+    },
+    {
+      name: 'block_processor',
+      script: 'core/middleware-litecoin-blockprocessor',
+      env: {
+        MONGO_URI: 'mongodb://localhost:27017/data',
+        MONGO_COLLECTION_PREFIX: 'litecoin',
+        RABBIT_URI: 'amqp://localhost:5672',
+        NETWORK: 'regtest',
+        DB_DRIVER: 'memory',
+        IPC_NAME: 'litecoin',
+        IPC_PATH: '/tmp/'
       }
     }
   ];
