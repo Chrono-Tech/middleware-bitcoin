@@ -28,8 +28,8 @@ after_success:
     if [ "$TRAVIS_TAG" == "" ]; then
       IMAGE_TAG_NAME="latest"
     elif [ "$TRAVIS_TAG" != "" ]; then
-      IMAGE_TAG_NAME="$TRAVIS_TAG"
+      IMAGE_TAG_NAME="develop"
     fi;
   - docker build --quiet -t gcr.io/deep-wares-144610/$TRAVIS_BRANCH/middleware-bitcoin:$IMAGE_TAG_NAME .
-  - docker push gcr.io/deep-wares-144610/${'TRavis',,}/middleware-bitcoin:$IMAGE_TAG_NAME
+  - docker push gcr.io/deep-wares-144610/middleware-bitcoin:$IMAGE_TAG_NAME
 
