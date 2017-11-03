@@ -49,6 +49,11 @@ middleware-bitcoin-rest
 ##### Litecoin Block processor
 This module is served as a full litecoin node. The iteraction with node happens via IPC interface. In order to install this module, you should сheck 'middleware-litecoin-blockprocessor' in cli menu during installation. Due the equality of rpc commands with bitcoin - balance and rest services for bitcoin are completely compatible with litecoin blockprocessor.
 
+In order to install it, check this option in cli:
+```
+middleware-litecoin-blockprocessor
+```
+
 ### Configure
 There are 2 possible scenarious of running the middleware modules:
 
