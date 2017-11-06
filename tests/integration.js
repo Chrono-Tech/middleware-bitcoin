@@ -1,6 +1,4 @@
-require('dotenv/config');
-
-const config = require('./core/middleware-bitcoin-blockprocessor/config'),
+const config = require('./config'),
   expect = require('chai').expect,
   _ = require('lodash'),
   Promise = require('bluebird'),
@@ -8,35 +6,44 @@ const config = require('./core/middleware-bitcoin-blockprocessor/config'),
     network: null,
     accounts: [],
     txs: {},
-    rest: 'http://localhost:8082',
-    stomp: {
-      url: 'http://localhost:15674/stomp',
-      creds: {
-        login: '',
-        pass: ''
-      }
-    }
+    /*    rest: 'http://localhost:8082',
+     stomp: {
+     url: 'http://localhost:15674/stomp',
+     creds: {
+     login: '',
+     pass: ''
+     }
+     }*/
+
+    /*    rest: 'https://middleware-bitcoin-testnet-rest.chronobank.io',
+     stomp: {
+     url: 'https://rabbitmq-webstomp.chronobank.io/stomp',
+     creds: {
+     login: 'admin',
+     pass: '38309100024'
+     }
+     }*/
   },
-  Network = require('bcoin/lib/protocol/network'),
-  bcoin = require('bcoin'),
+  bitcoin = require('bitcoinjs-lib'),
   SockJS = require('sockjs-client'),
   Stomp = require('webstomp-client'),
-  bcypher = require('blockcypher'),
-  bcapi = new bcypher('btc', 'test3', '1aed319fd4a2400b80e2b22090283add'),
+  Blockchain = require('cb-http-client'),
   request = require('request-promise');
 
 describe('core/integration', function () {
 
   before(async () => {
-    let ws = new SockJS(ctx.stomp.url);
+    let ws = new SockJS(config.stomp.url);
     ctx.stompClient = Stomp.over(ws, {heartbeat: false, debug: false});
-    ctx.network = Network.get('testnet');
-    let keyPair = bcoin.hd.generate(ctx.network);
-    let keyPair2 = bcoin.hd.generate(ctx.network);
-    ctx.accounts.push(keyPair, keyPair2);
+    ctx.network = bitcoin.networks.testnet;
+    ctx.blockchain = new Blockchain(config.node.rest, {api_key: config.node.api_key});
+    let keyPair = bitcoin.ECPair.makeRandom({network: ctx.network});
+    let keyPair2 = bitcoin.ECPair.makeRandom({network: ctx.network});
+    let keyPair3 = bitcoin.ECPair.fromWIF(config.node.faucetWIF, ctx.network);
+    ctx.accounts.push(keyPair, keyPair2, keyPair3);
 
     await new Promise(res =>
-      ctx.stompClient.connect(ctx.stomp.creds.login, ctx.stomp.creds.pass, res)
+      ctx.stompClient.connect(config.stomp.creds.login, config.stomp.creds.pass, res)
     );
 
   });
@@ -45,12 +52,11 @@ describe('core/integration', function () {
   });
 
   it('register address', async () => {
-    let keyring = new bcoin.keyring(ctx.accounts[0].privateKey, ctx.network);
     let response = await request({
       method: 'POST',
-      uri: `${ctx.rest}/addr`,
+      uri: `${config.rest}/addr`,
       body: {
-        address: keyring.getAddress().toString()
+        address: ctx.accounts[0].getAddress()
       },
       json: true
     });
@@ -59,17 +65,15 @@ describe('core/integration', function () {
   });
 
   it('generate some coins for accountA and validate balance changes via webstomp', async () => {
-    let address = new bcoin.keyring(ctx.accounts[0].privateKey, ctx.network).getAddress().toString();
-    return await new Promise(res => {
+
+    return await new Promise((res, rej) => {
       let confirmations = 0;
-      let tx = null;
-      ctx.stompClient.subscribe(`/exchange/events/${config.rabbit.serviceName}_balance.${address}`, function (message) {
+      let txid = null;
+      ctx.stompClient.subscribe(`/exchange/events/${config.stomp.serviceName}_balance.${ctx.accounts[0].getAddress()}`, function (message) {
         message = JSON.parse(message.body);
 
-        if (!tx || tx !== message.tx.txid)
+        if (!txid || txid !== message.tx.txid)
           return;
-
-        console.log(message);
 
         if (message.tx.confirmations === 1 || message.tx.confirmations === 3 || message.tx.confirmations === 6)
           confirmations++;
@@ -79,64 +83,81 @@ describe('core/integration', function () {
 
       });
 
-      bcapi.faucet(address, 500000, (err, result) => {
-        console.log(result);
-        tx = result.tx_ref;
-      });
+      new Promise((res, rej) =>
+        ctx.blockchain.addresses.unspents(ctx.accounts[2].getAddress(), (err, result) => err ? rej(err) : res(result))
+      )
+        .then(unspents => {
+          let tx = new bitcoin.TransactionBuilder(ctx.network);
+          tx.addInput(unspents[0].txId, unspents[0].vout);
+          tx.addOutput(ctx.accounts[0].getAddress(), unspents[0].value - 2800);
+          tx.sign(0, ctx.accounts[2]);
+          tx = tx.build();
+          ctx.blockchain.transactions.propagate(tx.toHex(), err => {
+            if (err) return rej(err);
+            txid = tx.getId();
+            console.log(txid)
+          })
+        });
 
     });
   });
 
   it('send coins to accountB from accountA', async () => {
 
-    let keyring = new bcoin.keyring(ctx.accounts[0].privateKey, ctx.network);
-    let keyring2 = new bcoin.keyring(ctx.accounts[1].privateKey, ctx.network);
-
     let coins = await request({
       method: 'GET',
-      uri: `${ctx.rest}/addr/${keyring.getAddress().toString()}/utxo`
+      json: true,
+      uri: `${config.rest}/addr/${ctx.accounts[0].getAddress()}/utxo`
     });
 
-    let inputCoins = _.chain(coins)
-      .transform((result, coin) => {
-        coin = {
-          version: 1,
-          height: coin.height,
-          value: coin.satoshis,
-          coinbase: false,
-          hash: coin.txid,
-          index: coin.vout
-        };
+    let tx = new bitcoin.TransactionBuilder(ctx.network);
+    tx.addInput(coins[0].txid, coins[0].vout);
+    tx.addOutput(ctx.accounts[1].getAddress(), coins[0].satoshis - 2800);
+    tx.sign(0, ctx.accounts[0]);
 
-        result.coins.push(bcoin.coin.fromJSON(coin));
-        result.amount += coin.value;
-      }, {amount: 0, coins: []})
-      .value();
+    return await new Promise(res => {
+      let confirmations = 0;
+      let txid = null;
+      ctx.stompClient.subscribe(`/exchange/events/${config.stomp.serviceName}_balance.${ctx.accounts[0].getAddress()}`, function (message) {
+        message = JSON.parse(message.body);
 
-    const mtx = new bcoin.mtx();
+        if (!txid || txid !== message.tx.txid)
+          return;
 
-    mtx.addOutput({
-      address: keyring2.getAddress(),
-      value: inputCoins.amount - 1000
+        if (message.tx.confirmations === 1 || message.tx.confirmations === 3 || message.tx.confirmations === 6)
+          confirmations++;
+
+        if (confirmations === 3)
+          res();
+      });
+
+      request({
+        method: 'POST',
+        uri: `${config.rest}/tx/send`,
+        body: {
+          tx: tx.build().toHex()
+        },
+        json: true
+      })
+        .then(resp => {
+          txid = resp.txid;
+        });
     });
+  });
 
-    await mtx.fund(inputCoins.coins, {
-      rate: 10000,
-      changeAddress: keyring.getAddress()
-    });
 
-    mtx.sign(keyring);
-    ctx.tx = mtx.toTX();
-
-    await request({
-      method: 'POST',
-      uri: `${ctx.rest}/tx/send`,
+  it('remove address', async () => {
+    let response = await request({
+      method: 'DELETE',
+      uri: `${config.rest}/addr`,
       body: {
-        tx: ctx.tx.toRaw().toString('hex')
+        address: ctx.accounts[0].getAddress()
       },
       json: true
     });
 
+    expect(response).to.include({code: 1});
   });
+
 
 });
