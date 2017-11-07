@@ -1,28 +1,10 @@
 const config = require('./config'),
   expect = require('chai').expect,
-  _ = require('lodash'),
   Promise = require('bluebird'),
   ctx = {
     network: null,
     accounts: [],
     txs: {},
-    /*    rest: 'http://localhost:8082',
-     stomp: {
-     url: 'http://localhost:15674/stomp',
-     creds: {
-     login: '',
-     pass: ''
-     }
-     }*/
-
-    /*    rest: 'https://middleware-bitcoin-testnet-rest.chronobank.io',
-     stomp: {
-     url: 'https://rabbitmq-webstomp.chronobank.io/stomp',
-     creds: {
-     login: 'admin',
-     pass: '38309100024'
-     }
-     }*/
   },
   bitcoin = require('bitcoinjs-lib'),
   SockJS = require('sockjs-client'),
@@ -75,6 +57,13 @@ describe('core/integration', function () {
         if (!txid || txid !== message.tx.txid)
           return;
 
+        expect(message).to.have.all.keys('address', 'balances', 'tx');
+        expect(message.balances).to.have.all.keys('confirmations0', 'confirmations3', 'confirmations6');
+
+        expect(message.tx).to.include.keys('txid', 'hash', 'time', 'confirmations',
+          'block', 'inputs', 'outputs', 'fee', 'valueIn', 'valueOut'
+        );
+
         if (message.tx.confirmations === 1 || message.tx.confirmations === 3 || message.tx.confirmations === 6)
           confirmations++;
 
@@ -95,7 +84,6 @@ describe('core/integration', function () {
           ctx.blockchain.transactions.propagate(tx.toHex(), err => {
             if (err) return rej(err);
             txid = tx.getId();
-            console.log(txid)
           })
         });
 
@@ -124,6 +112,20 @@ describe('core/integration', function () {
         if (!txid || txid !== message.tx.txid)
           return;
 
+        expect(message).to.have.all.keys('address', 'balances', 'tx');
+        expect(message.tx).to.include.keys('txid', 'hash', 'time', 'confirmations',
+          'block', 'inputs', 'outputs', 'fee', 'valueIn', 'valueOut'
+        );
+
+        if (message.tx.confirmations === 1)
+          expect(message.balances).to.include.all.keys('confirmations0');
+
+        if (message.tx.confirmations === 3)
+          expect(message.balances).to.include.keys('confirmations0', 'confirmations3');
+
+        if (message.tx.confirmations === 6)
+          expect(message.balances).to.include.keys('confirmations0', 'confirmations3', 'confirmations6');
+
         if (message.tx.confirmations === 1 || message.tx.confirmations === 3 || message.tx.confirmations === 6)
           confirmations++;
 
@@ -145,7 +147,6 @@ describe('core/integration', function () {
     });
   });
 
-
   it('remove address', async () => {
     let response = await request({
       method: 'DELETE',
@@ -158,6 +159,5 @@ describe('core/integration', function () {
 
     expect(response).to.include({code: 1});
   });
-
 
 });

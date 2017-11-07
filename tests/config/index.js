@@ -22,13 +22,24 @@ require('dotenv').config();
  *  }}
  */
 
+
+/*    rest: 'http://localhost:8082',
+ stomp: {
+ url: 'http://localhost:15674/stomp',
+ creds: {
+ login: '',
+ pass: ''
+ }
+ }*/
+
+
 module.exports = {
-  rest: 'http://54.149.244.28:8080',
+  rest: process.env.REST || 'http://localhost:8081',
   stomp: {
-    url: 'http://54.218.43.230:15674/stomp',
+    url: process.env.STOMP_URL || 'http://localhost:15674/stomp',
     creds: {
-      login: 'test',
-      pass: 'test123'
+      login: process.env.STOMP_LOGIN || 'admin',
+      pass: process.env.STOMP_PASS || '38309100024'
     },
     serviceName: process.env.RABBIT_SERVICE_NAME || 'app_bitcoin'
   },
