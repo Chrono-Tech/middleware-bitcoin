@@ -31,7 +31,7 @@ after_success:
     elif [ "$TRAVIS_TAG" != "" ]; then
       IMAGE_TAG_NAME="develop"
     fi;
-    - |
+  - |
     if [ "$TRAVIS_BRANCH" == "master" ]; then
       IMAGE_TAG_NAME="latest"
       docker build --quiet -t gcr.io/deep-wares-144610/middleware-bitcoin:$IMAGE_TAG_NAME .
